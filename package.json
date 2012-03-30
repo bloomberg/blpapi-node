@@ -1,0 +1,24 @@
+{
+  "name": "node-blpapi",
+  "version": "0.1.0",
+  "main": "./node-blpapi.js",
+  "description": "Bloomberg Open API binding for node.js",
+  "os": [ "linux" ],
+  "cpu": [ "x64", "ia32" ],
+  "scripts": {
+    "install": "node-waf configure build",
+    "update": "node-waf build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bloomberg/node-blpapi"
+  },
+  "bugs": {
+    "url": "https://github.com/bloomberg/node-blpapi/issues",
+    "email": "open-tech@bloomberg.net"
+  },
+  "maintainers": [
+    { "name": "Andrew Paprocki", "email": "andrew@ishiboo.com" }
+  ],
+  "engines": { "node": ">=0.6" }
+}

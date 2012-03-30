@@ -1,0 +1,5 @@
+.npmignore
+.gitignore
+README.md
+LICENSE
+build/
