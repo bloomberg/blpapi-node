@@ -5,7 +5,7 @@ node-blpapi
 
 Find source code in the [Github repository].
 
-[Bloomberg Open API]: http://open.bloomberg.com
+[Bloomberg Open API]: http://openbloomberg.com
 [Node.js]: http://nodejs.org
 [Github repository]: https://github.com/bloomberg/node-blpapi
 
@@ -19,7 +19,7 @@ This module requires:
 + [Bloomberg BLPAPI C++ SDK] v3.x
 + Bloomberg Desktop API (DAPI), Server API (SAPI), or [B-PIPE] subscription
 
-[Bloomberg BLPAPI C++ SDK]: http://open.bloomberg.com
+[Bloomberg BLPAPI C++ SDK]: http://openbloomberg.com
 [B-PIPE]: http://www.bloomberg.com/enterprise/enterprise_products/data_optimization/data_feeds
 
 Building / Installation
@@ -52,7 +52,7 @@ functionality.
 Full examples contained in the `examples` directory demonstrate how to
 use most SDK functionality.  Full descriptions of all availabe requests,
 responses, and options are contained within the BLPAPI API
-[Developer Guide](http://open.bloomberg.com/pdf/blpapi-developers-guide.pdf).
+[Developer Guide](http://www.openbloomberg.com/files/2012/03/blpapi-developers-guide.pdf).
 
 
 ### Opening A Session ###
