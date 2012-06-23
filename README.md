@@ -15,7 +15,7 @@ Dependencies
 This module requires:
 
 + Node.js version 0.6.x
-+ 32-bit or 64-bit Linux
++ 32-bit or 64-bit Linux or Windows
 + [Bloomberg BLPAPI C++ SDK] v3.x
 + Bloomberg Desktop API (DAPI), Server API (SAPI), or [B-PIPE] subscription
 
@@ -26,8 +26,12 @@ Building / Installation
 -----------------------
 
 To build the module, the Bloomberg BLPAPI C++ SDK must first be downloaded
-and unpacked.  An option is passed to `node-waf` to instruct it where to
-find the BLPAPI C++ SDK root directory:
+and unpacked.
+
+### Linux
+
+An option is passed to `node-waf` to instruct it where to find the
+BLPAPI C++ SDK root directory:
 
     #> node-waf configure --blpapi /path/to/blpapi_cpp_dir
     #> node-waf build
@@ -38,8 +42,20 @@ time to point to the BLPAPI C++ SDK root directory:
     #> export BLPAPI_ROOT=/path/to/blpapi_cpp_dir
     #> node-waf configure build
 
-The two files required to use these bindings are node-blpapi.js and
-node-blpapi.node.
+The two files required to use these bindings are `node-blpapi.js` and
+`blpapijs.node`.
+
+### Windows
+
+The `BLPAPI_ROOT` environment variable must be set ahead of time to point
+to the BLPAPI C++ SDK root directory.
+
+The `NODE_SRC` environment variable must be set ahead of time to point to
+the Node.js source code root directory.
+
+From a MSVC shell, the module can be build by simply invoking `msbuild`.
+The build will generate `blpapijs.node` from either the Debug or Release
+target in the current directory.
 
 Usage
 -----

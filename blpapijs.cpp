@@ -23,6 +23,26 @@
 #include <ctime>
 #include <cstdlib>
 
+#ifdef _WIN32
+#include <time.h>
+#endif
+
+#ifndef uv_mutex_t
+# ifdef _WIN32
+#  define uv_mutex_t CRITICAL_SECTION
+#  define uv_mutex_init(x) InitializeCriticalSection(x)
+#  define uv_mutex_lock(x) EnterCriticalSection(x)
+#  define uv_mutex_unlock(x) LeaveCriticalSection(x)
+#  define uv_mutex_destroy(x) DeleteCriticalSection(x)
+# else
+#  define uv_mutex_t pthread_mutex_t
+#  define uv_mutex_init(x) pthread_mutex_init(x, NULL)
+#  define uv_mutex_lock(x) pthread_mutex_lock(x)
+#  define uv_mutex_unlock(x) pthread_mutex_unlock(x)
+#  define uv_mutex_destroy(x) pthread_mutex_destroy(x)
+# endif
+#endif
+
 #define BLPAPI_EXCEPTION_TRY try {
 #define BLPAPI_EXCEPTION_CATCH \
     } catch (blpapi::Exception& e) { \
@@ -93,7 +113,7 @@ private:
     blpapi::Session *d_session;
     Persistent<Object> d_session_ref;
     std::deque<blpapi::Event> d_que;
-    pthread_mutex_t d_que_mutex;
+    uv_mutex_t d_que_mutex;
     bool d_started;
     bool d_stopped;
 };
@@ -119,7 +139,7 @@ Session::Session(const char *host, int port)
     d_session = new blpapi::Session(d_options, this);
     BLPAPI_EXCEPTION_CATCH
 
-    pthread_mutex_init(&d_que_mutex, NULL);
+    uv_mutex_init(&d_que_mutex);
 
     uv_ref(uv_default_loop());
 }
@@ -128,7 +148,7 @@ Session::~Session()
 {
     // Ref on the event loop is released in Destroy
 
-    pthread_mutex_destroy(&d_que_mutex);
+    uv_mutex_destroy(&d_que_mutex);
 }
 
 void
@@ -314,7 +334,7 @@ Session::formFields(std::string* str, Handle<Object> object)
     std::stringstream ss;
 
     // Format each array value into the options string "V[&V]"
-    for (int i = 0; i < Array::Cast(*object)->Length(); ++i) {
+    for (size_t i = 0; i < Array::Cast(*object)->Length(); ++i) {
         Local<String> s = object->Get(i)->ToString();
         std::vector<char> v;
         v.reserve(s->Utf8Length() + 1);
@@ -342,7 +362,7 @@ Session::formOptions(std::string* str, Handle<Value> value)
     if (value->IsArray()) {
         // Format each array value into the options string "V[&V]"
         Local<Object> object = value->ToObject();
-        for (int i = 0; i < Array::Cast(*object)->Length(); ++i) {
+        for (size_t i = 0; i < Array::Cast(*object)->Length(); ++i) {
             Local<String> key = object->Get(i)->ToString();
             std::vector<char> valv;
             valv.reserve(key->Utf8Length() + 1);
@@ -355,7 +375,7 @@ Session::formOptions(std::string* str, Handle<Value> value)
         // Format each KV pair into the options string "K=V[&K=V]"
         Local<Object> object = value->ToObject();
         Local<Array> keys = object->GetPropertyNames();
-        for (int i = 0; i < keys->Length(); ++i) {
+        for (size_t i = 0; i < keys->Length(); ++i) {
             Local<String> key = keys->Get(i)->ToString();
             std::vector<char> keyv;
             keyv.reserve(key->Utf8Length() + 1);
@@ -396,7 +416,7 @@ Session::subscribe(const Arguments& args, bool resubscribe)
     blpapi::SubscriptionList sl;
 
     Local<Object> o = args[0]->ToObject();
-    for (int i = 0; i < Array::Cast(*(args[0]))->Length(); ++i) {
+    for (size_t i = 0; i < Array::Cast(*(args[0]))->Length(); ++i) {
         Local<Value> v = o->Get(i);
         if (!v->IsObject()) {
             return ThrowException(Exception::Error(String::New(
@@ -490,7 +510,11 @@ mkdatetime(blpapi::Datetime* dt, Local<Value> val)
     int remainder = static_cast<int>(fmod(ms, 1000.0));
 
     struct tm tm;
+#ifdef _WIN32
+    gmtime_s(&tm, &sec);
+#else
     gmtime_r(&sec, &tm);
+#endif
 
     dt->setDate(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
     dt->setTime(tm.tm_hour, tm.tm_min, tm.tm_sec, remainder);
@@ -552,7 +576,7 @@ Session::Request(const Arguments& args)
     Local<Object> obj = args[2]->ToObject();
     Local<Array> props = obj->GetPropertyNames();
 
-    for (int i = 0; i < props->Length(); ++i) {
+    for (size_t i = 0; i < props->Length(); ++i) {
         // Process the key.
         Local<Value> keyval = props->Get(i);
         Local<String> key = keyval->ToString();
@@ -675,23 +699,44 @@ mknow(struct tm* tm)
 {
     time_t sec;
     time(&sec);
-    struct tm* ret = gmtime_r(&sec, tm);
-    return ret;
+#ifdef _WIN32
+    gmtime_s(tm, &sec);
+    return tm;
+#else
+    return gmtime_r(&sec, tm);
+#endif
 }
 
 static inline time_t
 mkutctime(struct tm* tm)
 {
     time_t ret;
+
+#ifdef _WIN32
+    char tz[128];
+    size_t len = 0;
+    getenv_s(&len, tz, sizeof(tz), "TZ");
+    _putenv_s("TZ", "UTC");
+    _tzset();
+#else
     char* tz = getenv("TZ");
     setenv("TZ", "UTC", 1);
     tzset();
+#endif
+
     ret = mktime(tm);
+
+#ifdef _WIN32
+    _putenv_s("TZ", len ? tz : "");
+    _tzset();
+#else
     if (tz)
         setenv("TZ", tz, 1);
     else
         unsetenv("TZ");
     tzset();
+#endif
+
     return ret;
 }
 
@@ -828,14 +873,31 @@ class StaticStringResource : public String::ExternalAsciiStringResource
     size_t d_len;
 };
 
+#define EVENT_TO_STRING_DECL(e) \
+    static StaticStringResource s_##e(#e)
+
 #define EVENT_TO_STRING(e) \
     case blpapi::Event::e : \
-        static StaticStringResource s_##e(#e); \
         return String::NewExternal(new StaticStringResource(s_##e))
 
 static inline Handle<Value>
 eventTypeToString(blpapi::Event::EventType et)
 {
+    EVENT_TO_STRING_DECL(ADMIN);
+    EVENT_TO_STRING_DECL(SESSION_STATUS);
+    EVENT_TO_STRING_DECL(SUBSCRIPTION_STATUS);
+    EVENT_TO_STRING_DECL(REQUEST_STATUS);
+    EVENT_TO_STRING_DECL(RESPONSE);
+    EVENT_TO_STRING_DECL(PARTIAL_RESPONSE);
+    EVENT_TO_STRING_DECL(SUBSCRIPTION_DATA);
+    EVENT_TO_STRING_DECL(SERVICE_STATUS);
+    EVENT_TO_STRING_DECL(TIMEOUT);
+    EVENT_TO_STRING_DECL(AUTHORIZATION_STATUS);
+    EVENT_TO_STRING_DECL(RESOLUTION_STATUS);
+    EVENT_TO_STRING_DECL(TOPIC_STATUS);
+    EVENT_TO_STRING_DECL(TOKEN_STATUS);
+    EVENT_TO_STRING_DECL(REQUEST);
+    EVENT_TO_STRING_DECL(UNKNOWN);
     switch (et) {
         EVENT_TO_STRING(ADMIN);
         EVENT_TO_STRING(SESSION_STATUS);
@@ -853,6 +915,8 @@ eventTypeToString(blpapi::Event::EventType et)
         EVENT_TO_STRING(REQUEST);
         EVENT_TO_STRING(UNKNOWN);
     }
+    return ThrowException(Exception::Error(String::New(
+                "Invalid event type.")));
 }
 
 void
@@ -880,7 +944,7 @@ Session::processMessage(blpapi::Event::EventType et, const blpapi::Message& msg)
         if (cid.valueType() == blpapi::CorrelationId::INT_VALUE ||
             cid.valueType() == blpapi::CorrelationId::AUTOGEN_VALUE) {
             Local<Object> cido = Object::New();
-            cido->Set(s_value, Integer::New(cid.asInteger()));
+            cido->Set(s_value, Integer::New((int)cid.asInteger()));
             cido->Set(s_class_id, Integer::New(cid.classId()));
             correlations->Set(j++, cido);
         } else {
@@ -894,7 +958,7 @@ Session::processMessage(blpapi::Event::EventType et, const blpapi::Message& msg)
 
     argv[1] = o;
 
-    this->emit(ARRAY_SIZE(argv), argv);
+    this->emit(sizeof(argv) / sizeof(argv[0]), argv);
 }
 
 void
@@ -907,16 +971,16 @@ Session::processEvents(uv_async_t *async, int status)
     bool empty;
     do {
         // Determine if the queue is empty
-        pthread_mutex_lock(&session->d_que_mutex);
+        uv_mutex_lock(&session->d_que_mutex);
         empty = session->d_que.empty();
         if (empty) {
-            pthread_mutex_unlock(&session->d_que_mutex);
+            uv_mutex_unlock(&session->d_que_mutex);
             break;
         }
 
         // Keep the lock and release once the head is retrieved
         const blpapi::Event& ev = session->d_que.front();
-        pthread_mutex_unlock(&session->d_que_mutex);
+        uv_mutex_unlock(&session->d_que_mutex);
 
         // Iterate over contained messages without holding lock
         blpapi::MessageIterator msgIter(ev);
@@ -927,21 +991,21 @@ Session::processEvents(uv_async_t *async, int status)
 
         // Reacquire and pop, updating empty flag to having to
         // loop and acquire the mutex for a second time.
-        pthread_mutex_lock(&session->d_que_mutex);
+        uv_mutex_lock(&session->d_que_mutex);
         session->d_que.pop_front();
         empty = session->d_que.empty();
-        pthread_mutex_unlock(&session->d_que_mutex);
+        uv_mutex_unlock(&session->d_que_mutex);
     } while (!empty);
 }
 
 bool
 Session::processEvent(const blpapi::Event& ev, blpapi::Session* session)
 {
-    pthread_mutex_lock(&d_que_mutex);
+    uv_mutex_lock(&d_que_mutex);
 
     d_que.push_back(ev);
 
-    pthread_mutex_unlock(&d_que_mutex);
+    uv_mutex_unlock(&d_que_mutex);
 
     s_async.data = this;
     uv_async_send(&s_async);

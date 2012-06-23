@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "main": "./node-blpapi.js",
   "description": "Bloomberg Open API binding for node.js",
-  "os": [ "linux" ],
+  "os": [ "linux", "win32" ],
   "cpu": [ "x64", "ia32" ],
   "scripts": {
     "install": "node-waf configure build",

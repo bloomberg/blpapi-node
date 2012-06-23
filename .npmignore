@@ -3,3 +3,8 @@
 README.md
 LICENSE
 build/
+Debug/
+Release/
+blpapijs.exp
+blpapijs.lib
+blpapijs.pdb
