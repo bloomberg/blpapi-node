@@ -873,31 +873,13 @@ class StaticStringResource : public String::ExternalAsciiStringResource
     size_t d_len;
 };
 
-#define EVENT_TO_STRING_DECL(e) \
-    static StaticStringResource s_##e(#e)
-
 #define EVENT_TO_STRING(e) \
     case blpapi::Event::e : \
-        return String::NewExternal(new StaticStringResource(s_##e))
+        return String::New(#e)
 
 static inline Handle<Value>
 eventTypeToString(blpapi::Event::EventType et)
 {
-    EVENT_TO_STRING_DECL(ADMIN);
-    EVENT_TO_STRING_DECL(SESSION_STATUS);
-    EVENT_TO_STRING_DECL(SUBSCRIPTION_STATUS);
-    EVENT_TO_STRING_DECL(REQUEST_STATUS);
-    EVENT_TO_STRING_DECL(RESPONSE);
-    EVENT_TO_STRING_DECL(PARTIAL_RESPONSE);
-    EVENT_TO_STRING_DECL(SUBSCRIPTION_DATA);
-    EVENT_TO_STRING_DECL(SERVICE_STATUS);
-    EVENT_TO_STRING_DECL(TIMEOUT);
-    EVENT_TO_STRING_DECL(AUTHORIZATION_STATUS);
-    EVENT_TO_STRING_DECL(RESOLUTION_STATUS);
-    EVENT_TO_STRING_DECL(TOPIC_STATUS);
-    EVENT_TO_STRING_DECL(TOKEN_STATUS);
-    EVENT_TO_STRING_DECL(REQUEST);
-    EVENT_TO_STRING_DECL(UNKNOWN);
     switch (et) {
         EVENT_TO_STRING(ADMIN);
         EVENT_TO_STRING(SESSION_STATUS);
