@@ -309,7 +309,7 @@ Session::OpenService(const Arguments& args)
 
     Local<String> s = args[0]->ToString();
     std::vector<char> uriv;
-    uriv.reserve(s->Utf8Length() + 1);
+    uriv.resize(s->Utf8Length() + 1);
     s->WriteUtf8(&uriv[0]);
 
     int cidi = args[1]->Int32Value();
@@ -337,7 +337,7 @@ Session::formFields(std::string* str, Handle<Object> object)
     for (size_t i = 0; i < Array::Cast(*object)->Length(); ++i) {
         Local<String> s = object->Get(i)->ToString();
         std::vector<char> v;
-        v.reserve(s->Utf8Length() + 1);
+        v.resize(s->Utf8Length() + 1);
         s->WriteUtf8(&v[0]);
         if (i > 0)
             ss << ",";
@@ -365,7 +365,7 @@ Session::formOptions(std::string* str, Handle<Value> value)
         for (size_t i = 0; i < Array::Cast(*object)->Length(); ++i) {
             Local<String> key = object->Get(i)->ToString();
             std::vector<char> valv;
-            valv.reserve(key->Utf8Length() + 1);
+            valv.resize(key->Utf8Length() + 1);
             key->WriteUtf8(&valv[0]);
             if (i > 0)
                 ss << "&";
@@ -378,7 +378,7 @@ Session::formOptions(std::string* str, Handle<Value> value)
         for (size_t i = 0; i < keys->Length(); ++i) {
             Local<String> key = keys->Get(i)->ToString();
             std::vector<char> keyv;
-            keyv.reserve(key->Utf8Length() + 1);
+            keyv.resize(key->Utf8Length() + 1);
             key->WriteUtf8(&keyv[0]);
             if (i > 0)
                 ss << "&";
@@ -386,7 +386,7 @@ Session::formOptions(std::string* str, Handle<Value> value)
 
             Local<String> val = object->Get(key)->ToString();
             std::vector<char> valv;
-            valv.reserve(val->Utf8Length() + 1);
+            valv.resize(val->Utf8Length() + 1);
             val->WriteUtf8(&valv[0]);
             ss << &valv[0];
         }
@@ -432,7 +432,7 @@ Session::subscribe(const Arguments& args, bool resubscribe)
                         "Property 'security' must be a string.")));
         }
         std::vector<char> secv;
-        secv.reserve(iv->ToString()->Length() + 1);
+        secv.resize(iv->ToString()->Length() + 1);
         iv->ToString()->WriteUtf8(&secv[0]);
 
         // Process 'fields' array
@@ -473,7 +473,7 @@ Session::subscribe(const Arguments& args, bool resubscribe)
     if (args.Length() == 2) {
         Local<String> s = args[1]->ToString();
         std::vector<char> labelv;
-        labelv.reserve(s->Length() + 1);
+        labelv.resize(s->Length() + 1);
         s->WriteUtf8(&labelv[0]);
         if (resubscribe)
             session->d_session->resubscribe(sl, &labelv[0], labelv.size());
@@ -560,14 +560,14 @@ Session::Request(const Arguments& args)
 
     Local<String> uri = args[0]->ToString();
     std::vector<char> uriv;
-    uriv.reserve(uri->Length() + 1);
+    uriv.resize(uri->Length() + 1);
     uri->WriteAscii(&uriv[0]);
 
     blpapi::Service service = session->d_session->getService(&uriv[0]);
 
     Local<String> name = args[1]->ToString();
     std::vector<char> namev;
-    namev.reserve(name->Utf8Length() + 1);
+    namev.resize(name->Utf8Length() + 1);
     name->WriteUtf8(&namev[0]);
 
     blpapi::Request request = service.createRequest(&namev[0]);
@@ -581,7 +581,7 @@ Session::Request(const Arguments& args)
         Local<Value> keyval = props->Get(i);
         Local<String> key = keyval->ToString();
         std::vector<char> keyv;
-        keyv.reserve(key->Utf8Length() + 1);
+        keyv.resize(key->Utf8Length() + 1);
         key->WriteUtf8(&keyv[0]);
 
         // Process the value.
@@ -593,7 +593,7 @@ Session::Request(const Arguments& args)
         if (val->IsString()) {
             Local<String> s = val->ToString();
             std::vector<char> valv;
-            valv.reserve(s->Utf8Length() + 1);
+            valv.resize(s->Utf8Length() + 1);
             s->WriteUtf8(&valv[0]);
             request.set(&keyv[0], &valv[0]);
         } else if (val->IsBoolean()) {
@@ -620,7 +620,7 @@ Session::Request(const Arguments& args)
                 if (subval->IsString()) {
                     Local<String> s = subval->ToString();
                     std::vector<char> subvalv;
-                    subvalv.reserve(s->Utf8Length() + 1);
+                    subvalv.resize(s->Utf8Length() + 1);
                     s->WriteUtf8(&subvalv[0]);
                     request.append(&keyv[0], &subvalv[0]);
                 } else if (subval->IsBoolean()) {
@@ -652,7 +652,7 @@ Session::Request(const Arguments& args)
     if (args.Length() == 5) {
         std::vector<char> labelv;
         Local<String> s = args[4]->ToString();
-        labelv.reserve(s->Utf8Length() + 1);
+        labelv.resize(s->Utf8Length() + 1);
         int len = s->WriteUtf8(&labelv[0]);
         session->d_session->sendRequest(request, cid, 0, &labelv[0], len);
     } else {
