@@ -1,7 +1,10 @@
 // Copyright (C) 2012 Bloomberg Finance L.P.
 
+#define BUILDING_NODE_EXTENSION
+
 #include <v8.h>
 #include <node.h>
+#include <node_version.h>
 #include <uv.h>
 
 #include <blpapi_session.h>
@@ -141,7 +144,11 @@ Session::Session(const char *host, int port)
 
     uv_mutex_init(&d_que_mutex);
 
+#if NODE_VERSION_AT_LEAST(0, 7, 9)
+    uv_ref(reinterpret_cast<uv_handle_t *>(&s_async));
+#else
     uv_ref(uv_default_loop());
+#endif
 }
 
 Session::~Session()
@@ -170,7 +177,9 @@ Session::Initialize(Handle<Object> target)
     target->Set(String::NewSymbol("Session"), t->GetFunction());
 
     uv_async_init(uv_default_loop(), &s_async, Session::processEvents);
+#if !NODE_VERSION_AT_LEAST(0, 7, 9)
     uv_unref(uv_default_loop());
+#endif
 
     s_emit = NODE_PSYMBOL("emit");
     s_event_type = NODE_PSYMBOL("eventType");
@@ -283,7 +292,11 @@ Session::Destroy(const Arguments& args)
 
     session->d_session_ref.Dispose();
 
+#if NODE_VERSION_AT_LEAST(0, 7, 9)
+    uv_unref(reinterpret_cast<uv_handle_t *>(&s_async));
+#else
     uv_unref(uv_default_loop());
+#endif
 
     return scope.Close(args.This());
 }
@@ -1007,9 +1020,8 @@ Session::emit(int argc, Handle<Value> argv[])
 }   // close namespace blpapijs
 }   // close namespace BloombergLP
 
-extern "C" {
-    void NODE_EXTERN init(Handle<Object> target) {
-        BloombergLP::blpapijs::Session::Initialize(target);
-    }
-    NODE_MODULE(blpapi, init);
+void init(Handle<Object> target) {
+    BloombergLP::blpapijs::Session::Initialize(target);
 }
+
+NODE_MODULE(blpapijs, init)

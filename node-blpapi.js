@@ -2,7 +2,7 @@
 
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
-var blpapi = require('./blpapijs');
+var blpapi = require('./build/Release/blpapijs');
 
 exports.Session = function(args) {
     this.session = new blpapi.Session(args);

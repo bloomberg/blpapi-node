@@ -1,8 +1,4 @@
-.lock-wscript
-build
-blpapijs.node
-blpapijs.exp
-blpapijs.lib
-blpapijs.pdb
-Debug
-Release
+build/
+Debug/
+Release/
+npm-debug.log
