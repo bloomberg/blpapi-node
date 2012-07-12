@@ -2,7 +2,15 @@
 
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
-var blpapi = require('./build/Release/blpapijs');
+var path = require('path');
+var blpapi;
+
+var prefix = path.join(__dirname, '/build/Release');
+try {
+    blpapi = require(path.join(prefix, '/blpapijs'));
+} catch (e) {
+    blpapi = require(path.join(prefix, '/lib.target/blpapijs'));
+}
 
 exports.Session = function(args) {
     this.session = new blpapi.Session(args);
