@@ -14,48 +14,28 @@ Dependencies
 
 This module requires:
 
-+ Node.js version 0.6.x
-+ 32-bit or 64-bit Linux or Windows
-+ [Bloomberg BLPAPI C++ SDK] v3.x
++ Node.js version >= **0.6.x**
++ Linux or Windows (32 or 64-bit)
++ GCC (Linux) or MSVC++ (Windows)
 + Bloomberg Desktop API (DAPI), Server API (SAPI), or [B-PIPE] subscription
+
+This module includes:
+
++ [Bloomberg BLPAPI C++ SDK] v3.4.8.1
 
 [Bloomberg BLPAPI C++ SDK]: http://openbloomberg.com/open-api
 [B-PIPE]: http://www.bloomberg.com/enterprise/enterprise_products/data_optimization/data_feeds
 
-Building / Installation
------------------------
+Installation
+------------
 
-To build the module, the Bloomberg BLPAPI C++ SDK must first be downloaded
-and unpacked.
+From your project directory, run:
 
-### Linux
+```
+$ npm install git://github.com/bloomberg/node-blpapi.git
+```
 
-An option is passed to `node-waf` to instruct it where to find the
-BLPAPI C++ SDK root directory:
-
-    #> node-waf configure --blpapi /path/to/blpapi_cpp_dir
-    #> node-waf build
-
-Alternatively, the `BLPAPI_ROOT` environment variable can be set ahead of
-time to point to the BLPAPI C++ SDK root directory:
-
-    #> export BLPAPI_ROOT=/path/to/blpapi_cpp_dir
-    #> node-waf configure build
-
-The two files required to use these bindings are `node-blpapi.js` and
-`blpapijs.node`.
-
-### Windows
-
-The `BLPAPI_ROOT` environment variable must be set ahead of time to point
-to the BLPAPI C++ SDK root directory.
-
-The `NODE_SRC` environment variable must be set ahead of time to point to
-the Node.js source code root directory.
-
-From a MSVC shell, the module can be build by simply invoking `msbuild`.
-The build will generate `blpapijs.node` from either the Debug or Release
-target in the current directory.
+This will download and build `node-blpapi` in `node_modules/`.
 
 Usage
 -----
