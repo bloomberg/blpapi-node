@@ -7,6 +7,8 @@
       'include_dirs': [
         '<(module_root_dir)/deps/blpapi/include'
       ],
+      'cflags!': [ '-fno-exceptions' ],
+      'cflags_cc!': [ '-fno-exceptions' ],
       'conditions': [
         ['OS=="win"', {
           'conditions': [
@@ -30,7 +32,7 @@
             '-Wl,-R<(module_root_dir)/deps/blpapi/lib',
             '-L<(module_root_dir)deps/blpapi/lib'
           ],
-	  'conditions': [
+          'conditions': [
             ['target_arch=="ia32"', {
               'libraries': [ '-lblpapi3_32' ]
             }],
@@ -38,6 +40,11 @@
               'libraries': [ '-lblpapi3_64' ]
             }]
           ]
+        }],
+        ['OS=="mac"', {
+          'xcode_settings': {
+            'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
+          }
         }]
       ]
     }
