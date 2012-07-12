@@ -25,12 +25,9 @@
           ]
         }],
         ['OS=="linux"', {
-          'cflags': [
-            '-shared', '-fPIC'
-          ],
-          'libraries': [
+          'ldflags': [
             '-Wl,-R<(module_root_dir)/deps/blpapi/lib',
-            '-L<(module_root_dir)deps/blpapi/lib'
+            '-L<(module_root_dir)/deps/blpapi/lib'
           ],
           'conditions': [
             ['target_arch=="ia32"', {
