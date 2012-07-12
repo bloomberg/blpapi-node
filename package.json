@@ -6,12 +6,11 @@
   "os": [ "linux", "win32" ],
   "cpu": [ "x64", "ia32" ],
   "scripts": {
-    "install": "node-waf configure build",
-    "update": "node-waf build"
+    "install": "node-gyp configure build"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bloomberg/node-blpapi"
+    "url": "https://github.com/bloomberg/node-blpapi.git"
   },
   "bugs": {
     "url": "https://github.com/bloomberg/node-blpapi/issues",
@@ -20,5 +19,6 @@
   "maintainers": [
     { "name": "Andrew Paprocki", "email": "andrew@ishiboo.com" }
   ],
+  "license": "MIT",
   "engines": { "node": ">=0.6" }
 }
