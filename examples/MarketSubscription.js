@@ -1,7 +1,7 @@
 // Copyright (C) 2012 Bloomberg Finance L.P.
 
 var c = require('./Console.js');
-var blpapi = require('node-blpapi');
+var blpapi = require('blpapi');
 
 var hp = c.getHostPort();
 var session = new blpapi.Session({ host: hp.host, port: hp.port });

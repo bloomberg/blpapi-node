@@ -35,7 +35,7 @@ From your project directory, run:
 $ npm install git://github.com/bloomberg/node-blpapi.git
 ```
 
-This will download and build `node-blpapi` in `node_modules/`.
+This will download and build `blpapi` in `node_modules/`.
 
 Usage
 -----
@@ -53,7 +53,7 @@ responses, and options are contained within the BLPAPI API
 
 ### Opening A Session ###
 
-    var blpapi = require('node-blpapi');
+    var blpapi = require('blpapi');
     var session = new blpapi.Session({ host: '127.0.0.1', port: 8194 });
 
     session.on('SessionStarted', function(m) {
