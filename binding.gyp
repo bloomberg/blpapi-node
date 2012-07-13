@@ -2,7 +2,6 @@
   'targets': [
     {
       'target_name': 'blpapijs',
-      'type': 'shared_library',
       'sources': [ 'blpapijs.cpp' ],
       'include_dirs': [
         '<(module_root_dir)/deps/blpapi/include'
