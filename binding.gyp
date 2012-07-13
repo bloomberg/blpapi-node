@@ -10,6 +10,11 @@
       'cflags_cc!': [ '-fno-exceptions' ],
       'conditions': [
         ['OS=="win"', {
+          'msvs_settings': {
+            'VCCLCompilerTool': {
+              'AdditionalOptions': [ '/EHsc' ]
+            }
+          },
           'conditions': [
             ['target_arch=="ia32"', {
               'libraries': [
