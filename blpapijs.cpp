@@ -863,29 +863,6 @@ Session::elementValueToValue(const blpapi::Element& e, int idx)
     return Null();
 }
 
-class StaticStringResource : public String::ExternalAsciiStringResource
-{
-  public:
-    StaticStringResource(const char* str)
-        : d_str(str) { d_len = strlen(d_str); }
-    StaticStringResource(const StaticStringResource& rhs)
-        : d_str(rhs.d_str), d_len(rhs.d_len) {}
-    ~StaticStringResource() {}
-
-    StaticStringResource& operator=(const StaticStringResource& rhs) {
-        d_str = rhs.d_str;
-        d_len = rhs.d_len;
-        return *this;
-    }
-
-    const char* data() const { return d_str; }
-    size_t length() const { return d_len; }
-
-  private:
-    const char* d_str;
-    size_t d_len;
-};
-
 #define EVENT_TO_STRING(e) \
     case blpapi::Event::e : \
         return String::New(#e)
