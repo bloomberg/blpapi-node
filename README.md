@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/bloomberg/node-blpapi.png)](http://travis-ci.org/bloomberg/node-blpapi)
 node-blpapi
 ===========
 
