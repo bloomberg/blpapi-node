@@ -30,7 +30,8 @@
         }],
         ['OS=="linux"', {
           'ldflags': [
-            '-Wl,-R<(module_root_dir)/deps/blpapi/linux'
+            '-Wl,-R<(module_root_dir)/deps/blpapi/linux',
+            '-L<(module_root_dir)/deps/blpapi/linux'
           ],
           'conditions': [
             ['target_arch=="ia32"', {
