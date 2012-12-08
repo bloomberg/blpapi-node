@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "main": "./blpapi.js",
   "description": "Bloomberg Open API (BLPAPI) binding for node.js",
-  "os": [ "linux", "win32", "osx" ],
+  "os": [ "linux", "win32", "darwin" ],
   "cpu": [ "x64", "ia32" ],
   "scripts": {
     "install": "node-gyp configure build"
