@@ -16,13 +16,13 @@ Dependencies
 This module requires:
 
 + Node.js version >= **0.6.x**
-+ Linux or Windows (32 or 64-bit)
-+ GCC (Linux) or MSVC++ (Windows)
++ Linux, Windows, or Mac OS X (32 or 64-bit)
++ GCC (Linux), MSVC++ (Windows), or Xcode (Mac OS X)
 + Bloomberg Desktop API (DAPI), Server API (SAPI), or [B-PIPE] subscription
 
 This module includes:
 
-+ [Bloomberg BLPAPI C++ SDK] v3.4.8.1
++ [Bloomberg BLPAPI C++ SDK] v3.5.2.x
 
 [Bloomberg BLPAPI C++ SDK]: http://openbloomberg.com/open-api
 [B-PIPE]: http://www.bloomberg.com/enterprise/enterprise_products/data_optimization/data_feeds

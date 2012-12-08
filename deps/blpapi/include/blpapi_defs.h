@@ -49,6 +49,7 @@
 #define BLPAPI_DATETIME_MINUTES_PART      0x20
 #define BLPAPI_DATETIME_SECONDS_PART      0x40
 #define BLPAPI_DATETIME_MILLISECONDS_PART 0x80
+#define BLPAPI_DATETIME_FRACSECONDS_PART  0x80
 #define BLPAPI_DATETIME_DATE_PART         (BLPAPI_DATETIME_YEAR_PART|   \
                                           BLPAPI_DATETIME_MONTH_PART|  \
                                           BLPAPI_DATETIME_DAY_PART)
@@ -57,6 +58,8 @@
                                           BLPAPI_DATETIME_SECONDS_PART)
 #define BLPAPI_DATETIME_TIMEMILLI_PART    (BLPAPI_DATETIME_TIME_PART|   \
                                           BLPAPI_DATETIME_MILLISECONDS_PART)
+#define BLPAPI_DATETIME_TIMEFRACSECONDS_PART (BLPAPI_DATETIME_TIME_PART|   \
+                                          BLPAPI_DATETIME_FRACSECONDS_PART)
 
 
 #define BLPAPI_EVENTTYPE_ADMIN                 1

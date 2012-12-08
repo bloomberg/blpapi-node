@@ -29,6 +29,10 @@
 //@DESCRIPTION: This component implements a representation of an item in a
 // 'Message'.
 
+#ifndef INCLUDED_BLPAPI_CALL
+#include <blpapi_call.h>
+#endif
+
 #ifndef INCLUDED_BLPAPI_TYPES
 #include <blpapi_types.h>
 #endif
@@ -180,6 +184,12 @@ int blpapi_Element_getValueAsDatetime(
         size_t index);
 
 BLPAPI_EXPORT
+int blpapi_Element_getValueAsHighPrecisionDatetime(
+        const blpapi_Element_t *element,
+        blpapi_HighPrecisionDatetime_t *buffer,
+        size_t index);
+
+BLPAPI_EXPORT
 int blpapi_Element_getValueAsElement(
         const blpapi_Element_t *element,
         blpapi_Element_t **buffer,
@@ -242,6 +252,12 @@ BLPAPI_EXPORT
 int blpapi_Element_setValueDatetime(
         blpapi_Element_t *element,
         const blpapi_Datetime_t *value,
+        size_t index);
+
+BLPAPI_EXPORT
+int blpapi_Element_setValueHighPrecisionDatetime(
+        blpapi_Element_t *element,
+        const blpapi_HighPrecisionDatetime_t *value,
         size_t index);
 
 BLPAPI_EXPORT
@@ -311,6 +327,13 @@ int blpapi_Element_setElementDatetime(
         const char* nameString,
         const blpapi_Name_t* name,
         const blpapi_Datetime_t *value);
+
+BLPAPI_EXPORT
+int blpapi_Element_setElementHighPrecisionDatetime(
+        blpapi_Element_t *element,
+        const char *nameString,
+        const blpapi_Name_t *name,
+        const blpapi_HighPrecisionDatetime_t *value);
 
 BLPAPI_EXPORT
 int blpapi_Element_setElementFromField(
@@ -472,7 +495,6 @@ class Element {
     //
     // - A DATETIME can be set from Datetime
 
-
     blpapi_Element_t *d_handle_p;
 
   public:
@@ -495,6 +517,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const char* name, char value);
         // Set the specified element 'name' within this sequence or
@@ -503,6 +526,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const char* name, Int32 value);
         // Set the specified element 'name' within this sequence or
@@ -511,6 +535,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const char* name, Int64 value);
         // Set the specified element 'name' within this sequence or
@@ -519,6 +544,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const char* name, Float32 value);
         // Set the specified element 'name' within this sequence or
@@ -527,6 +553,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const char* name, Float64 value);
         // Set the specified element 'name' within this sequence or
@@ -535,6 +562,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const char* name, const Datetime& value);
         // Set the specified element 'name' within this sequence or
@@ -543,6 +571,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const char* name, const char* value);
         // Set the specified element 'name' within this sequence or
@@ -551,6 +580,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const char* name, const Name& value);
         // Set the specified element 'name' within this sequence or
@@ -559,6 +589,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' must be a valid pointer.
 
     void setElement(const Name& name, bool value);
         // Set the specified element 'name' within this sequence or
@@ -567,6 +598,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setElement(const Name& name, char value);
         // Set the specified element 'name' within this sequence or
@@ -575,6 +607,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setElement(const Name& name, Int32 value);
         // Set the specified element 'name' within this sequence or
@@ -583,6 +616,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setElement(const Name& name, Int64 value);
         // Set the specified element 'name' within this sequence or
@@ -591,6 +625,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setElement(const Name& name, Float32 value);
         // Set the specified element 'name' within this sequence or
@@ -599,6 +634,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setElement(const Name& name, Float64 value);
         // Set the specified element 'name' within this sequence or
@@ -607,6 +643,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setElement(const Name& name, const Datetime& value);
         // Set the specified element 'name' within this sequence or
@@ -615,6 +652,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setElement(const Name& name, const char* value);
         // Set the specified element 'name' within this sequence or
@@ -623,6 +661,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setElement(const Name& name, const Name& value);
         // Set the specified element 'name' within this sequence or
@@ -631,6 +670,7 @@ class Element {
         // Element, or if the Element identified by the specified
         // 'name' cannot be initialized from the type of the specified
         // 'value'.
+        // 'name' cannot be an uninitialized Name.
 
     void setValue(bool value, size_t index=0);
         // Set the value of the specified 'index'th entry in this
@@ -1006,12 +1046,14 @@ class Element {
         // contains a valid Element identified by the specified 'name'
         // return that Element at the location specified by 'result'
         // and return 0. Otherwise, return an error (non-zero).
+        // 'name' must be a valid pointer.
 
     int getElement(Element* result, const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // return that Element at the location specified by 'result'
         // and return 0. Otherwise, return an error (non-zero).
+        // 'name' cannot be an uninitialized Name.
 
     int getElement(Element *result, size_t position) const;
         // If this Element is either a sequence or a choice and
@@ -1030,95 +1072,111 @@ class Element {
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // return that Element. Otherwise, an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     Element getElement(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // return that Element. Otherwise, an exception is thrown.
+        // 'name' must be a valid pointer.
 
     bool getElementAsBool(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a bool then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' must be a valid pointer.
 
     bool getElementAsBool(const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a bool then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     char getElementAsChar(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a char then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' must be a valid pointer.
 
     char getElementAsChar(const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a char then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     Int32 getElementAsInt32(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as an Int32 then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' must be a valid pointer.
 
     Int32 getElementAsInt32(const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as an Int32 then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     Int64 getElementAsInt64(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as an Int64 then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' must be a valid pointer.
 
     Int64 getElementAsInt64(const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as an Int64 then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     Float32 getElementAsFloat32(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a Float32 then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' must be a valid pointer.
 
     Float32 getElementAsFloat32(const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a Float32 then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     Float64 getElementAsFloat64(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a Float64 then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' must be a valid pointer.
 
     Float64 getElementAsFloat64(const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a Float64 then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     Datetime getElementAsDatetime(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a Datetime then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' must be a valid pointer.
 
     Datetime getElementAsDatetime(const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as Datetime then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     const char* getElementAsString(const char* name) const;
         // If this Element is either a sequence or a choice and
@@ -1127,6 +1185,7 @@ class Element {
         // pointer to a string is returned. The pointer remains valid
         // until this Element is destroyed. Otherwise an exception is
         // thrown.
+        // 'name' must be a valid pointer.
 
     const char* getElementAsString(const Name& name) const;
         // If this Element is either a sequence or a choice and
@@ -1135,18 +1194,21 @@ class Element {
         // pointer to a string is returned. The pointer remains valid
         // until this Element is destroyed. Otherwise an exception is
         // thrown.
+        // 'name' cannot be an uninitialized Name.
 
     Name getElementAsName(const char* name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a Name then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' must be a valid pointer.
 
     Name getElementAsName(const Name& name) const;
         // If this Element is either a sequence or a choice and
         // contains a valid Element identified by the specified 'name'
         // which can be returned as a Name then its value is
         // returned. Otherwise an exception is thrown.
+        // 'name' cannot be an uninitialized Name.
 
     Element getChoice() const;
         // Return the selection name of this element if this element is a
@@ -1253,10 +1315,12 @@ inline
 void Element::setElement(const char* name, const Datetime& value)
 {
     ExceptionUtil::throwOnError(
-            blpapi_Element_setElementDatetime(d_handle_p,
-                                              name,
-                                              0,
-                                              &value.rawValue()));
+        BLPAPI_CALL_ELEMENT_SETELEMENTHIGHPRECISIONDATETIME(
+                                                d_handle_p,
+                                                name,
+                                                0,
+                                                &value.rawHighPrecisionValue())
+    );
 }
 
 inline
@@ -1325,10 +1389,12 @@ inline
 void Element::setElement(const Name& name, const Datetime& value)
 {
     ExceptionUtil::throwOnError(
-            blpapi_Element_setElementDatetime(d_handle_p,
-                                              0,
-                                              name.impl(),
-                                              &value.rawValue()));
+        BLPAPI_CALL_ELEMENT_SETELEMENTHIGHPRECISIONDATETIME(
+                                                d_handle_p,
+                                                0,
+                                                name.impl(),
+                                                &value.rawHighPrecisionValue())
+    );
 }
 
 inline
@@ -1397,7 +1463,11 @@ inline
 void Element::setValue(const Datetime& value, size_t index)
 {
     ExceptionUtil::throwOnError(
-        blpapi_Element_setValueDatetime(d_handle_p, &value.rawValue(), index));
+        BLPAPI_CALL_ELEMENT_SETVALUEHIGHPRECISIONDATETIME(
+                                                d_handle_p,
+                                                &value.rawHighPrecisionValue(),
+                                                index)
+    );
 }
 
 inline
@@ -1472,9 +1542,11 @@ inline
 void Element::appendValue(const Datetime& value)
 {
     ExceptionUtil::throwOnError(
-        blpapi_Element_setValueDatetime(d_handle_p,
-                                        &value.rawValue(),
-                                        BLPAPI_ELEMENT_INDEX_END));
+        BLPAPI_CALL_ELEMENT_SETVALUEHIGHPRECISIONDATETIME(
+                                                d_handle_p,
+                                                &value.rawHighPrecisionValue(),
+                                                BLPAPI_ELEMENT_INDEX_END)
+    );
 }
 
 inline
@@ -1747,10 +1819,9 @@ int Element::getValueAs(Float64* buffer, size_t index) const
 inline
 int Element::getValueAs(Datetime* buffer, size_t index) const
 {
-    return blpapi_Element_getValueAsDatetime(
-            d_handle_p,
-            &buffer->rawValue(),
-            index);
+    BLPAPI_CALL_ELEMENT_GETVALUEASHIGHPRECISIONDATETIME(d_handle_p,
+                                                        buffer,
+                                                        index);
 }
 
 inline

@@ -119,8 +119,6 @@ class InvalidConversionException: public Exception {
     {
     }
 };
-// XXX: compatibility typedef; to be removed in version 3.5
-typedef InvalidConversionException InvalidConverstionException;
 
 class IndexOutOfRangeException: public Exception {
   public:

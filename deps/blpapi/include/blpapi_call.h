@@ -144,6 +144,42 @@
                 blpapi_SessionOptions_setDefaultKeepAliveResponseTimeout(h,t) \
     : 0)
 
+#define BLPAPI_CALL_HIGHPRECISIONDATETIME_COMPARE(a1, a2)                     \
+    (BLPAPI_TABLE_CHECK(blpapi_HighPrecisionDatetime_compare)                 \
+    ? g_blpapiFunctionEntries.blpapi_HighPrecisionDatetime_compare(a1, a2)    \
+    : blpapi_Datetime_compare((a1)->datetime, (a2)->datetime))
+
+#define BLPAPI_CALL_HIGHPRECISIONDATETIME_PRINT(a1, a2, a3, a4, a5)                  \
+    (BLPAPI_TABLE_CHECK(blpapi_HighPrecisionDatetime_print)                          \
+    ? g_blpapiFunctionEntries.blpapi_HighPrecisionDatetime_print(a1, a2, a3, a4, a5) \
+    : blpapi_Datetime_print(&((a1)->datetime), a2, a3, a4, a5))
+
+#define BLPAPI_CALL_ELEMENT_SETVALUEHIGHPRECISIONDATETIME(a1, a2, a3)         \
+    (BLPAPI_TABLE_CHECK(blpapi_Element_setValueHighPrecisionDatetime)         \
+    ? g_blpapiFunctionEntries.blpapi_Element_setValueHighPrecisionDatetime    \
+        (a1, a2, a3)                                                          \
+    : blpapi_Element_setValueDatetime(a1, &((a2)->datetime), a3))
+
+#define BLPAPI_CALL_ELEMENT_SETELEMENTHIGHPRECISIONDATETIME(a1, a2, a3, a4)   \
+    (BLPAPI_TABLE_CHECK(blpapi_Element_setElementHighPrecisionDatetime)       \
+    ? g_blpapiFunctionEntries.blpapi_Element_setElementHighPrecisionDatetime  \
+        (a1, a2, a3, a4)                                                      \
+    : blpapi_Element_setElementDatetime(a1, a2, a3, &((a4)->datetime)))
+
+#define BLPAPI_CALL_ELEMENT_GETVALUEASHIGHPRECISIONDATETIME(a1, a2, a3)       \
+    if (BLPAPI_TABLE_CHECK(blpapi_Element_getValueAsHighPrecisionDatetime)) { \
+        return g_blpapiFunctionEntries                                        \
+                .blpapi_Element_getValueAsHighPrecisionDatetime(              \
+                                                 a1,                          \
+                                                 &(a2)->rawHighPrecisionValue(),\
+                                                 a3);                         \
+    } else {                                                                  \
+        buffer->rawHighPrecisionValue().picoseconds = 0;                      \
+        return blpapi_Element_getValueAsDatetime(a1,                          \
+                                                 &(a2)->rawValue(),           \
+                                                 a3);                         \
+    }
+
 #else  // if defined(_WIN32) || defined(__WIN32__)
 #define BLPAPI_CALL_EVENTFORMATTER_APPENDMESSAGESEQ(a1, a2, a3, a4, a5, a6)   \
     (blpapi_EventFormatter_appendMessageSeq)(a1, a2, a3, a4, a5, a6)
@@ -178,6 +214,20 @@
     (blpapi_SessionOptions_setDefaultKeepAliveInactivityTime)(a1, a2)
 #define BLPAPI_CALL_SESSIONOPTION_SETDEFAULTKEEPALIVERESPONSETIMEOUT(a1, a2)  \
     (blpapi_SessionOptions_setDefaultKeepAliveResponseTimeout)(a1, a2)
+#define BLPAPI_CALL_HIGHPRECISIONDATETIME_COMPARE(a1, a2)                     \
+    (blpapi_HighPrecisionDatetime_compare)(a1, a2)
+#define BLPAPI_CALL_HIGHPRECISIONDATETIME_PRINT(a1, a2, a3, a4, a5)           \
+    (blpapi_HighPrecisionDatetime_print)(a1, a2, a3, a4, a5)
+#define BLPAPI_CALL_ELEMENT_SETVALUEHIGHPRECISIONDATETIME(a1, a2, a3)         \
+    (blpapi_Element_setValueHighPrecisionDatetime(a1, a2, a3))
+#define BLPAPI_CALL_ELEMENT_SETELEMENTHIGHPRECISIONDATETIME(a1, a2, a3, a4)   \
+    (blpapi_Element_setElementHighPrecisionDatetime(a1, a2, a3, a4))
+#define BLPAPI_CALL_ELEMENT_GETVALUEASHIGHPRECISIONDATETIME(a1, a2, a3)       \
+    return blpapi_Element_getValueAsHighPrecisionDatetime(                    \
+                                                 a1,                          \
+                                                 &a2->rawHighPrecisionValue(),\
+                                                 a3);
+
 #endif // if defined(_WIN32) || defined(__WIN32__)
 
 #endif // __cplusplus
