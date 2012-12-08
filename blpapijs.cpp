@@ -1,6 +1,8 @@
 // Copyright (C) 2012 Bloomberg Finance L.P.
 
+#ifndef BUILDING_NODE_EXTENSION
 #define BUILDING_NODE_EXTENSION
+#endif
 
 #include <v8.h>
 #include <node.h>
