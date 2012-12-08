@@ -389,24 +389,35 @@ class SessionOptions {
         // Set whether automatically restarting connection if disconnected.
 
     void setMaxEventQueueSize(size_t eventQueueSize);
-        // Set the maximum outstanding undelivered events per session
+        // Set the maximum number of outstanding undelivered events per session
         // to the specified 'eventQueueSize'. All subsequent events
         // delivered over the network will be dropped by the session if the
         // number of outstanding undelivered events is 'eventQueueSize',
         // the specified threshold. The default value is 10000.
 
     void setSlowConsumerWarningHiWaterMark(float hiWaterMark);
-        // Set the ratio of maxEventQueueSize as the upper threshold for
-        // currently pending events after which a "slow consumer" event
-        // will be generated. The deafult is 0.75  Range is (loWaterMark, 1].
-        // To disable the slow consumer warning set the 'hiWaterMark' to 1.
+        // Set the point at which "slow consumer" events will be generated,
+        // using the specified 'highWaterMark' as a fraction of
+        // 'maxEventQueueSize'; the default value is 0.75. A warning event will
+        // be generated when the number of outstanding undelivered events
+        // passes above 'hiWaterMark * maxEventQueueSize'.
+        // The behavior of the function is undefined unless
+        // '0.0 < hiWaterMark <= 1.0'. Further, at the time that
+        // 'Session.start()' is called, it must be the case that
+        // 'slowConsumerWarningLoWaterMark() * maxEventQueueSize()' <
+        // 'slowConsumerWarningHiWaterMark() * maxEventQueueSize()'.
 
     void setSlowConsumerWarningLoWaterMark(float loWaterMark);
-        // Set the ratio of maxEventQueueSize as the lower threshold for
-        // currently pending events in a slow consumer after which a
-        // "slow consumer cleared" event will be generated.
-        // The deafult is 0.5. Range is [0, hiWaterMark).  To disable the
-        // slow consumer cleared message, set the 'loWaterMark' to 0.
+        // Set the point at which "slow consumer cleared" events will be
+        // generated, using the specified 'loWaterMark' as a fraction of
+        // 'maxEventQueueSize'; the default value is 0.5. A warning cleared
+        // event will be generated when the number of outstanding undelivered
+        // events drops below 'loWaterMark * maxEventQueueSize'.
+        // The behavior of the function is undefined unless
+        // '0.0 <= loWaterMark < 1.0'. Further, at the time that
+        // 'Session.start()' is called, it must be the case that
+        // 'slowConsumerWarningLoWaterMark() * maxEventQueueSize()' <
+        // 'slowConsumerWarningHiWaterMark() * maxEventQueueSize()'.
 
     void setDefaultKeepAliveInactivityTime(int inactivityTime);
         // Set the interval (in milliseconds) of sending keep alive requests if
@@ -493,15 +504,15 @@ class SessionOptions {
         // by connecting a server.
 
     size_t maxEventQueueSize() const;
-        // Return the value of maximum outstanding undelivered events 
+        // Return the value of maximum outstanding undelivered events
         // that the session is configured with.
 
     float slowConsumerWarningHiWaterMark() const;
-        // Return the ratio of maxEventQueueSize at which "slow consumer" event
-        // will be generated.
+        // Return the fraction of maxEventQueueSize at which "slow consumer"
+        // event will be generated.
 
     float slowConsumerWarningLoWaterMark() const;
-        // Return the ratio of maxEventQueueSize at which a
+        // Return the fraction of maxEventQueueSize at which
         // "slow consumer cleared" event will be generated.
 
     int defaultKeepAliveInactivityTime() const;

@@ -33,6 +33,7 @@
 
 #include <blpapi_defs.h>
 #include <blpapi_correlationid.h>
+#include <blpapi_streamproxy.h>
 #include <blpapi_versioninfo.h>
 #include <stddef.h>
 
@@ -64,6 +65,9 @@ typedef struct blpapi_Message blpapi_Message_t;
 
 struct blpapi_Request;
 typedef struct blpapi_Request blpapi_Request_t;
+
+struct blpapi_HighPrecisionDatetime_tag;
+typedef struct blpapi_HighPrecisionDatetime_tag blpapi_HighPrecisionDatetime_t;
 
 // End Forward declarations
 
@@ -116,6 +120,28 @@ typedef struct blpapi_FunctionEntries {
         blpapi_SessionOptions_t *parameters);
     int (*blpapi_SessionOptions_defaultKeepAliveResponseTimeout)(
         blpapi_SessionOptions_t *parameters);
+    int (*blpapi_HighPrecisionDatetime_compare)(
+        const blpapi_HighPrecisionDatetime_t*,
+        const blpapi_HighPrecisionDatetime_t*);
+    int (*blpapi_HighPrecisionDatetime_print)(
+        const blpapi_HighPrecisionDatetime_t*,
+        blpapi_StreamWriter_t,
+        void*,
+        int,
+        int);
+    int (*blpapi_Element_getValueAsHighPrecisionDatetime)(
+        const blpapi_Element_t*,
+        blpapi_HighPrecisionDatetime_t*,
+        size_t);
+    int (*blpapi_Element_setValueHighPrecisionDatetime)(
+        blpapi_Element_t*,
+        const blpapi_HighPrecisionDatetime_t*,
+        size_t);
+    int (*blpapi_Element_setElementHighPrecisionDatetime)(
+        blpapi_Element_t*,
+        const char*,
+        const blpapi_Name_t*,
+        const blpapi_HighPrecisionDatetime_t*);
 
 } blpapi_FunctionEntries_t;
 
