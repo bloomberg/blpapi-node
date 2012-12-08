@@ -33,6 +33,12 @@ Installation
 From your project directory, run:
 
 ```
+$ npm install blpapi
+```
+
+To install directly from github source, run:
+
+```
 $ npm install git://github.com/bloomberg/node-blpapi.git
 ```
 
