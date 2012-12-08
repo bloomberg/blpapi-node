@@ -1,6 +1,6 @@
 {
   "name": "blpapi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "./blpapi.js",
   "description": "Bloomberg Open API (BLPAPI) binding for node.js",
   "os": [ "linux", "win32", "osx" ],
