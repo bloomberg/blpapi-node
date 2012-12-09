@@ -816,8 +816,11 @@ Session::elementValueToValue(const blpapi::Element& e, int idx)
                 date.tm_hour = dt.hours();
                 date.tm_isdst = 0;
                 time_t sec = mkutctime(&date);
+                if (dt.hasParts(blpapi::DatetimeParts::OFFSET)) {
+                    sec -= dt.offset() * 60;  // UTC offset (in minutes)
+                }
                 double ms = sec * 1000.0L;
-                if (dt.hasParts(blpapi::DatetimeParts::TIMEMILLI))
+                if (dt.hasParts(blpapi::DatetimeParts::FRACSECONDS))
                     ms += dt.milliSeconds();
                 return Date::New(ms);
             }
@@ -849,8 +852,11 @@ Session::elementValueToValue(const blpapi::Element& e, int idx)
                 date.tm_isdst = 0;
             }
             time_t sec = mkutctime(&date);
+            if (dt.hasParts(blpapi::DatetimeParts::OFFSET)) {
+                sec -= dt.offset() * 60;  // UTC offset (in minutes)
+            }
             double ms = sec * 1000.0L;
-            if (dt.hasParts(blpapi::DatetimeParts::TIMEMILLI))
+            if (dt.hasParts(blpapi::DatetimeParts::FRACSECONDS))
                 ms += dt.milliSeconds();
             return Date::New(ms);
         }
