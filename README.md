@@ -44,6 +44,15 @@ $ npm install git://github.com/bloomberg/node-blpapi.git
 
 This will download and build `blpapi` in `node_modules/`.
 
+**Note:** Windows users using the Express version of Visual Studio may not
+have the 64-bit compiler platform installed. If errors are seen related
+to the `x64` platform not being found, please force a 32-bit arch before
+invoking `npm` by running from the command shell:
+
+```
+> set npm_config_arch="ia32"
+```
+
 Usage
 -----
 
