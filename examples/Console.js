@@ -10,13 +10,6 @@ var util = require('util');
 // This is intended for console apps which continually monitor
 // data and are not request/response based.
 module.exports.createConsole = function(session) {
-    var rint = require('readline').createInterface(process.stdin, {});
-    rint.input.on('keypress', function(char, key) {
-        if (key.name == 'escape' || (key.ctrl && key.name == 'c')) {
-            session.stop();
-        }
-    });
-    require('tty').setRawMode(true);
     session.on('SessionTerminated', function(m) {
         session.destroy();
         process.exit();
