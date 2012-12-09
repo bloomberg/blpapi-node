@@ -37,8 +37,8 @@ session.on('ReferenceDataResponse', function(m) {
         var chain = m.data.securityData[0].fieldData.CHAIN_FULL;
         for (i in chain) {
             var strike = chain[i];
-            var call = strike['column    '] + " Equity";
-            var put = strike['column   1'] + " Equity";
+            var call = strike['Call Ticker'] + " Equity";
+            var put = strike['Put Ticker'] + " Equity";
             options.push(call, put);
         }
         if (m.eventType === 'RESPONSE') {
