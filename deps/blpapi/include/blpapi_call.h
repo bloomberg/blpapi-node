@@ -180,6 +180,14 @@
                                                  a3);                         \
     }
 
+#define BLPAPI_CALL_SESSION_RESUBSCRIBEWITHID(a1, a2, a3, a4, a5)             \
+(BLPAPI_TABLE_CHECK(blpapi_Session_resubscribeWithId)                     \
+? g_blpapiFunctionEntries.blpapi_Session_resubscribeWithId(a1, a2, a3, a4, a5)\
+: blpapi_Session_resubscribe(a1, a2, a4, a5))
+
+#define BLPAPI_CALL_EVENTFORMATTER_SETVALUENULL(a1, a2, a3)                   \
+    (BLPAPI_TABLE_CALL(blpapi_EventFormatter_setValueNull)(a1, a2, a3))
+
 #else  // if defined(_WIN32) || defined(__WIN32__)
 #define BLPAPI_CALL_EVENTFORMATTER_APPENDMESSAGESEQ(a1, a2, a3, a4, a5, a6)   \
     (blpapi_EventFormatter_appendMessageSeq)(a1, a2, a3, a4, a5, a6)
@@ -227,6 +235,11 @@
                                                  a1,                          \
                                                  &a2->rawHighPrecisionValue(),\
                                                  a3);
+#define BLPAPI_CALL_SESSION_RESUBSCRIBEWITHID(a1, a2, a3, a4, a5)             \
+    (blpapi_Session_resubscribeWithId)(a1, a2, a3, a4, a5)
+
+#define BLPAPI_CALL_EVENTFORMATTER_SETVALUENULL(a1, a2, a3)                   \
+    (blpapi_EventFormatter_setValueNull)(a1, a2, a3)
 
 #endif // if defined(_WIN32) || defined(__WIN32__)
 

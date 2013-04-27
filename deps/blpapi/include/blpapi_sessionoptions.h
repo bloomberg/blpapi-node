@@ -309,7 +309,7 @@ class SessionOptions {
     ~SessionOptions();
         // Destroy this SessionOptions.
 
-    // MANIUPLATORS
+    // MANIPULATORS
 
     SessionOptions& operator=(const SessionOptions& rhs);
         // Assign to this object the value of the specified 'rhs' object.

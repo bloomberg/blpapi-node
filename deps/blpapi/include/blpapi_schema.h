@@ -21,14 +21,20 @@
 #ifndef INCLUDED_BLPAPI_SCHEMA
 #define INCLUDED_BLPAPI_SCHEMA
 
-//@PURPOSE: Provide a representation of schema
+//@PURPOSE: Provide a representation of a schema describing structured messages
 //
 //@CLASSES:
-// blpapi::SchemaStatus: The status for the schema
-// blpapi::SchemaTypeDefinition: Definitions for schema types
-// blpapi::SchemaElementDefinition: Definitions for element types
+// blpapi::SchemaStatus: the version status of a schema
+// blpapi::SchemaTypeDefinition: definitions of schema types
+// blpapi::SchemaElementDefinition: definitions of message elements
 //
-//@DESCRIPTION: This component provides a representation of schema.
+//@DESCRIPTION: This component provides types for representing schemata which
+// describe structured messages. Such schemata consist of two distinct kinds of
+// definitions: "type" definitions (represented by 'SchemaTypeDefinition'
+// objects) declare types than can be used within other definitions (of both
+// kinds); an "element" definition defines a specific field by associating a
+// field identifier with a particular type, as well as the number of values of
+// that type that are permitted to be associated with that identifier.
 
 #ifndef INCLUDED_BLPAPI_CONSTANT
 #include <blpapi_constant.h>
@@ -214,9 +220,8 @@ namespace blpapi {
                          // ===================
 
 struct SchemaStatus {
-    // The possible values for an item in the schema.
-
-    // Possible values for an item in the schema.
+    // This 'struct' provides a namespace for enumerating the possible
+    // deprecation statuses of a schema element or type.
 
     enum Value {
         ACTIVE              = BLPAPI_STATUS_ACTIVE,     // This item is current
@@ -231,6 +236,13 @@ struct SchemaStatus {
                                                         // current and will not
                                                         // appear in Messages
         PENDING_DEPRECATION = BLPAPI_STATUS_PENDING_DEPRECATION
+                                                        // This item is
+                                                        // expected to be
+                                                        // deprecated in the
+                                                        // future; clients are
+                                                        // advised to migrate
+                                                        // away from use of
+                                                        // this item.
     };
 };
 
@@ -241,33 +253,47 @@ class SchemaTypeDefinition;
                        // =============================
 
 class SchemaElementDefinition {
-    // The definition of an item in the data schema.
+    // This class implements the definition of an individual field within a
+    // schema type. An element is defined by an identifer/name, a type, and the
+    // number of values of that type that may be associated with the
+    // identifier/name. In addition, this class offers access to metadata
+    // providing a description and deprecation status for the field. Finally,
+    // 'SchemaElementDefinition' provides an interface for associating
+    // arbitrary user-defined data (specified as a 'void*') with an element
+    // definition.
     //
-    // SchemaElementDefinition are returned by Service objects and
-    // Operation objects to define the content of requests, replies
-    // and events. The SchemaTypeDefinition returned by
-    // SchemaElementDefinition::typeDefinition() may itself return
-    // SchemaElementDefinition objects when the schema contains
-    // complex items. SchemaElementDefinition objects are read-only
-    // and always created by the API, never by the application.
+    // 'SchemaElementDefinition' objects are returned by 'Service' and
+    // 'Operation' objects to define the content of requests, replies and
+    // events. The 'SchemaTypeDefinition' returned by
+    // 'SchemaElementDefinition::typeDefinition()' may itself provide access to
+    // 'SchemaElementDefinition' objects when the schema contains nested
+    // elements. (See the 'SchemaTypeDefinition' documentation for more
+    // information on complex types.)
     //
-    // The SchemaElementDefinition contains the symbolic name, any
-    // constraints on this item and the SchemaTypeDefinition for
-    // instances of this item.
+    // An optional element has 'minValues() == 0'.
     //
-    // An item which is optional in the schema has minValues()==0.
+    // A mandatory element has 'minValues() >= 1'.
     //
-    // An item which is mandatory in the schema has minValues()>=1.
+    // An element that must constain a single value has
+    // 'minValues() == maxValues() == 1'.
     //
-    // An item which is a single value has maxValues()==1.
+    // An element containing an array has 'maxValues() > 1'.
     //
-    // An item which is an array has maxValues()>1.
+    // An element with no upper limit on the number of values has
+    // 'maxValues() == UNBOUNDED'.
     //
-    // An item which is an unbounded array has maxValues()==UNBOUNDED.
+    // 'SchemaElementDefinition' objects are read-only, with the exception of a
+    // single 'void*' attribute for storing user data.
+    // 'SchemaElementDefinition' objects have *reference* *semantics* with
+    // respect to this user data field: calling 'c.setUserData(void*)' modifies
+    // the user data associated with 'c', as well as that associated with all
+    // copies of 'c'. As a result, functions which set or read this attribute
+    // are *NOT* per-object thread-safe. Clients must syncrhonize such
+    // operations across *all* *copies* of an object.
     //
-    // As well as the symbolic name, array constraints and other
-    // constraints this class also provides access to the description
-    // and status of the item.
+    // Application clients need never create fresh 'SchemaElementDefinition'
+    // objects directly; applications will typically work with copies of
+    // objects returned by other 'blpapi' components.
 
     blpapi_SchemaElementDefinition_t *d_impl_p;
 
@@ -283,65 +309,73 @@ class SchemaElementDefinition {
     SchemaElementDefinition(blpapi_SchemaElementDefinition_t *handle);
 
     ~SchemaElementDefinition();
-        // Destroy this SchemaElementDefinition.
+        // Destroy this object.
 
     // MANIPULATORS
 
     void setUserData(void *userData);
-        // Set the user data associated with this
-        // SchemaElementDefinition to the specified 'userData'.
+        // Set the user data associated with this 'SchemaElementDefinition' --
+        // and all copies of this 'SchemaElementDefinition' -- to the specified
+        // 'userData'. Clients are responsible for synchronizing calls to this
+        // function, and to 'userData()', across all copies of this
+        // 'SchemaElementDefinition' object.
 
     // ACCESSORS
 
     Name name() const;
-        // Returns the name of this item.
+        // Return the name identifying this element within its containing
+        // structure/type.
 
     const char *description() const;
-        // Returns a pointer to a null-terminated string containing a
-        // human readable description of this item. This pointer is
-        // valid until this SchemaElementDefinition is destroyed.
+        // Return a null-terminated string containing a human-readable
+        // description of this element. This pointer is valid until this
+        // 'SchemaElementDefinition' is destroyed.
 
     int status() const;
-        // Returns the status (SchemaStatus::Value) of this
-        // SchemaElementDefinition.
+        // Return the deprecation status, as a 'SchemaStatus::Value', of this
+        // element.
 
     const SchemaTypeDefinition typeDefinition() const;
-        // Returns the SchemaTypeDefinition of this item.
+        // Return the type of values contained in this element.
 
     size_t minValues() const;
-        // Returns the minimum number of occurrences of this item. This
-        // value is always >= 0.
+        // Return the minimum number of occurrences of this element. This value
+        // is always greater than or equal to zero.
 
     size_t maxValues() const ;
-        // Returns the maximum number of occurrences of this item. This
-        // value is always >= 1.
+        // Return the maximum number of occurrences of this element. This value
+        // is always greater than or equal to one.
 
     size_t numAlternateNames() const;
-        // Returns the number of alternate names for this item.
+        // Return the number of alternate names for this element.
 
     Name getAlternateName(size_t index) const;
-        // Returns the specified 'index'th alternate name for this
-        // item. If 'index'>=numAlternateNames() an exception is
-        // thrown.
+        // Return the specified 'index'th alternate name for this element. If
+        // 'index >=numAlternateNames()' an exception is thrown.
 
     void *userData() const;
-        // Returns the user data associated with this
-        // SchemaElementDefinition. If setUserData() has never been
-        // called for this SchemaElementDefinition this returns 0.
+        // Return the user data associated with this 'SchemaElementDefinition'.
+        // If no user data has been associated with this
+        // 'SchemaElementDefinition' then return 0. Clients are responsible for
+        // synchronizing calls to this function with calls to
+        // 'setUserData(void*)' made on not only this
+        // 'SchemaElementDefinition', but also all copies of this
+        // 'SchemaElementDefinition'. Note that 'SchemaElementDefinition'
+        // objects have reference semantics: this function will reflect the
+        // last value set on *any* copy of this 'SchemaElementDefinition'.
 
     std::ostream& print(std::ostream& stream,
                         int level=0,
                         int spacesPerLevel=4) const;
-        // Format this SchemaElementDefinition to the specified output
-        // 'stream' at the (absolute value of) the optionally specified
-        // indentation 'level' and return a reference to 'stream'. If
-        // 'level' is specified, optionally specify 'spacesPerLevel',
-        // the number of spaces per indentation level for this and all
-        // of its nested objects. If 'level' is negative, suppress
-        // indentation of the first line. If 'spacesPerLevel' is
-        // negative, format the entire output on one line, suppressing
-        // all but the initial indentation (as governed by 'level').
-
+        // Format this SchemaElementDefinition to the specified output 'stream'
+        // at the (absolute value of) the optionally specified indentation
+        // 'level' and return a reference to 'stream'. If 'level' is specified,
+        // optionally specify 'spacesPerLevel', the number of spaces per
+        // indentation level for this and all of its nested objects. If 'level'
+        // is negative, suppress indentation of the first line. If
+        // 'spacesPerLevel' is negative, format the entire output on one line,
+        // suppressing all but the initial indentation (as governed by
+        // 'level').
 
     blpapi_SchemaElementDefinition_t *impl() const;
 };
@@ -363,25 +397,32 @@ std::ostream& operator<<(std::ostream& stream,
                        // ==========================
 
 class SchemaTypeDefinition {
-    // The definition of a type in the data schema.
+    // This class implements a representation of a "type" that can be used
+    // within a schema, including both simple atomic types (integers, dates,
+    // strings, etc.) as well as "complex" types defined a sequences of or
+    // choice among a collection (named) elements, each of which is in turn
+    // described by another type. In addition to accessors for the type's
+    // structure, this class also offers access to metadata providing a
+    // description and deprecation status for the type. Finally,
+    // 'SchemaTypeDefinition' provides an interface for associating arbitrary
+    // user-defined data (specified as a 'void*') with a type definition.
     //
-    // Each SchemaElementDefinition object has a SchemaTypeDefinition
-    // (which it may share with other SchemaElementDefinition
-    // objects). SchemaTypeDefinition objects are read-only and always
-    // created by the API, never by the application.
+    // Each 'SchemaElementDefinition' object is associated with a single
+    // 'SchemaTypeDefinition'; one 'SchemaTypeDefinition' may be used by zero,
+    // one, or many 'SchemaElementDefinition' objects.
     //
-    // A SchemaTypeDefinition can define either a items which are
-    // simple (that is, they are a single value) or sequence or
-    // choice Element (that is, they may contain an item or items
-    // which are accessed by name)
+    // 'SchemaTypeDefinition' objects are read-only, with the exception of a
+    // single 'void*' attribute for storing user data. 'SchemaTypeDefinition'
+    // objects have *reference* *semantics* with respect to this user data
+    // field: calling 'c.setUserData(void*)' modifies the user data associated
+    // with 'c', as well as that associated with all copies of 'c'. As a
+    // result, functions which set or read this attribute are *NOT* per-object
+    // thread-safe. Clients must syncrhonize such operations across *all*
+    // *copies* of an object.
     //
-    // For sequence or choice items the SchemaTypeDefinition provides
-    // access to the individual SchemaElementDefinition objects that
-    // define each member of the sequence.
-    //
-    // In addition, the SchemaTypeDefinition provides access to the
-    // symbolic name of the TypeDefinition, its description and its
-    // status.
+    // Application clients need never create fresh 'SchemaTypeDefinition'
+    // objects directly; applications will typically work with copies of
+    // objects returned by other 'blpapi' components.
 
     blpapi_SchemaTypeDefinition_t *d_impl_p;
 
@@ -389,94 +430,101 @@ class SchemaTypeDefinition {
     SchemaTypeDefinition(blpapi_SchemaTypeDefinition_t *handle);
 
     ~SchemaTypeDefinition();
-        // Destroy this SchemaTypeDefinition.
+        // Destroy this object.
 
     // MANIPULATORS
 
     void setUserData(void *userData);
-        // Set the user data associated with this
-        // SchemaTypeDefinition to the specified 'userData'.
+        // Set the user data associated with this 'SchemaTypeDefinition' -- and
+        // all copies of this 'SchemaTypeDefinition' -- to the specified
+        // 'userData'. Clients are responsible for synchronizing calls to this
+        // function, and to 'userData()', across all copies of this
+        // 'SchemaTypeDefinition' object.
 
     // ACCESSORS
 
     int datatype() const;
-        // Returns the DataType of this SchemaTypeDefinition.
+        // Return the 'DataType' of this 'SchemaTypeDefinition'.
 
     Name name() const;
-        // Returns the name of this SchemaTypeDefinition.
+        // Return the name of this 'SchemaTypeDefinition'.
 
     const char *description() const;
-        // Returns a pointer to a null-terminated string which
-        // contains a human readable description of this
-        // SchemaTypeDefinition. The pointer remains valid until this
-        // SchemaTypeDefinition is destroyed.
+        // Return a null-terminated string which contains a human readable
+        // description of this 'SchemaTypeDefinition'. The returned pointer
+        // remains valid until this 'SchemaTypeDefinition' is destroyed.
 
     int status() const;
-        // Returns the status (SchemaStatus::Value) of this
-        // SchemaTypeDefinition.
+        // Return the deprecation status, as a 'SchemaStatus::Value', of this
+        // 'SchemaTypeDefinition'.
 
     size_t numElementDefinitions() const;
-        // Returns the number of SchemaElementDefinition objects
-        // contained by this SchemaTypeDefinition. If this
-        // SchemaTypeDefinition is neither a choice nor a sequence this
-        // will return 0.
+        // Return the number of 'SchemaElementDefinition' objects contained by
+        // this 'SchemaTypeDefinition'. If this 'SchemaTypeDefinition' is
+        // neither a choice nor a sequence this will return 0.
 
     bool isComplexType() const;
-        // Returns 'true' if this SchemaTypeDefinition represents a
-        // sequence or choice type.
+        // Return 'true' if this 'SchemaTypeDefinition' represents a sequence
+        // or choice type.
 
     bool isSimpleType() const;
-        // Returns 'true' if this SchemaTypeDefinition represents
-        // neither a sequence nor a choice type.
+        // Return 'true' if this 'SchemaTypeDefinition' represents neither a
+        // sequence nor a choice type.
 
     bool isEnumerationType() const;
-        // Returns 'true' if this SchemaTypeDefinition represents an
-        // enumeration type.
+        // Return 'true' if this 'SchemaTypeDefinition' represents an enumeration
+        // type.
 
     bool hasElementDefinition(const Name& name) const;
-        // Returns 'true' if this SchemaTypeDefinition contains an item
-        // with the specified 'name', otherwise returns 'false'.
+        // Return 'true' if this 'SchemaTypeDefinition' contains an element
+        // with the specified 'name'; otherwise returns 'false'.
 
     bool hasElementDefinition(const char *name) const;
-        // Returns 'true' if this SchemaTypeDefinition contains an
-        // item with the specified 'name', otherwise returns 'false'.
+        // Return 'true' if this 'SchemaTypeDefinition' contains an element
+        // with the specified 'name'; otherwise returns 'false'.
 
     SchemaElementDefinition getElementDefinition(const Name& name) const;
-        // Returns the definition of the item identified by the
-        // specified 'name'. If there is no item 'name' an exception
-        // is thrown.
+        // Return the definition of the element identified by the specified
+        // 'name'. If 'hasElementDefinition(name) != true' then an exception is
+        // thrown.
 
     SchemaElementDefinition getElementDefinition(const char *nameString) const;
-        // Returns the definition of the item identified by the
-        // specified 'nameString'. If there is no item 'nameString' an
+        // Return the definition of the element identified by the specified
+        // 'nameString'. If 'hasElementDefinition(nameString) != true' then an
         // exception is thrown.
 
     SchemaElementDefinition getElementDefinition(size_t index) const;
-        // Returns the definition of the specified 'index'th item. If
-        // 'index'>=numElementDefinitions() an exception is thrown.
+        // Return the definition of the element a the specified 'index' in the
+        // sequence of elements. If 'index >= numElementDefinitions()' an
+        // exception is thrown.
 
     const ConstantList enumeration() const;
-        // If this SchemaTypeDefinition returns 'true' to
-        // isEnumerationType() this returns a ConstantList which
-        // contains the possible values.
+        // Return a 'ConstantList' containing all possible values of the
+        // enumeration defined by this type. The behavior of this function is
+        // undefined unless 'isEnumerationType() == true'.
 
     void *userData() const;
-        // Returns the user data associated with this
-        // SchemaTypeDefinition object. If setUserData() has never
-        // been called for this SchemaTypeDefinition this returns 0.
+        // Return the user data associated with this 'SchemaTypeDefinition'. If
+        // no user data has been associated with this 'SchemaTypeDefinition'
+        // then return 0. Clients are responsible for synchronizing calls to
+        // this function with calls to 'setUserData(void*)' made on not only
+        // this 'SchemaTypeDefinition', but also all copies of this
+        // 'SchemaTypeDefinition'. Note that 'SchemaTypeDefinition' objects
+        // have reference semantics: this function will reflect the last value
+        // set on *any* copy of this 'SchemaTypeDefinition'.
 
     std::ostream& print(std::ostream& stream,
                         int level=0,
                         int spacesPerLevel=4) const;
-        // Format this SchemaTypeDefinition to the specified output
-        // 'stream' at the (absolute value of) the optionally specified
-        // indentation 'level' and return a reference to 'stream'. If
-        // 'level' is specified, optionally specify 'spacesPerLevel',
-        // the number of spaces per indentation level for this and all
-        // of its nested objects. If 'level' is negative, suppress
-        // indentation of the first line. If 'spacesPerLevel' is
-        // negative, format the entire output on one line, suppressing
-        // all but the initial indentation (as governed by 'level').
+        // Format this SchemaTypeDefinition to the specified output 'stream' at
+        // the (absolute value of) the optionally specified indentation 'level'
+        // and return a reference to 'stream'. If 'level' is specified,
+        // optionally specify 'spacesPerLevel', the number of spaces per
+        // indentation level for this and all of its nested objects. If 'level'
+        // is negative, suppress indentation of the first line. If
+        // 'spacesPerLevel' is negative, format the entire output on one line,
+        // suppressing all but the initial indentation (as governed by
+        // 'level').
 };
 
 // FREE OPERATORS

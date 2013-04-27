@@ -383,87 +383,80 @@ namespace blpapi {
 class Element {
     // Element represents an item in a message.
     //
-    // An Element can represent: a single value of any data type
-    // supported by the Bloomberg API; an array of values; a sequence
-    // or a choice.
+    // An Element can represent: a single value of any data type supported by
+    // the Bloomberg API; an array of values; a sequence or a choice.
     //
-    // The value(s) in an Element can be queried in a number of
-    // ways. For an Element which represents a single value or an
-    // array of values use the getValueAs() functions or
-    // getValueAsBool() etc. For an Element which represents a
-    // sequence or choice use getElementAsBool() etc. In addition, for
-    // choices and sequences, hasElement() and getElement() are
-    // useful.
+    // The value(s) in an Element can be queried in a number of ways. For an
+    // Element which represents a single value or an array of values use the
+    // getValueAs() functions or getValueAsBool() etc. For an Element which
+    // represents a sequence or choice use getElementAsBool() etc. In addition,
+    // for choices and sequences, hasElement() and getElement() are useful.
     //
-    // This example shows how to access the value of a
-    // scalar element 's' as a floating point number:
+    // This example shows how to access the value of a scalar element 's' as a
+    // floating point number:
     //..
     //      float f = s.getValueAsFloat32();
     //..
-    // Similarly, this example shows how to retrieve the third value
-    // in an array element 'a', as a floating pointer number:
+    // Similarly, this example shows how to retrieve the third value in an
+    // array element 'a', as a floating pointer number:
     //..
     //      float f = a.getValueAsFloat32(2);
     //..
-    // Use numValues() to determine the number of values
-    // available. For single values, it will return either 0 or 1. For
-    // arrays it will return the actual number of values in the array.
+    // Use numValues() to determine the number of values available. For single
+    // values, it will return either 0 or 1. For arrays it will return the
+    // actual number of values in the array.
     //
-    // To retrieve values from a complex element types (sequences and
-    // choices) use the getElementAs...() family of methods. This
-    // example shows how to get the value of the element 'city' in
-    // the sequence element 'address':
+    // To retrieve values from a complex element types (sequences and choices)
+    // use the getElementAs...() family of methods. This example shows how to
+    // get the value of the element 'city' in the sequence element 'address':
     //..
     //      const char* city = address.getElementAsString("city");
     //..
-    // The value(s) of an Element can be set in a number of ways. For
-    // an Element which represents a single value or an array of
-    // values use the setValue() or appendValue() functions. For an
-    // element which represents a sequence or a choice use the
-    // setElement() functions.
+    // The value(s) of an Element can be set in a number of ways. For an
+    // Element which represents a single value or an array of values use the
+    // setValue() or appendValue() functions. For an element which represents a
+    // sequence or a choice use the setElement() functions.
     //
-    // This example shows how to set the value of an Element 's'
-    // from an integer:
+    // This example shows how to set the value of an Element 's' from an
+    // integer:
     //..
     //      Int32 value=5;
     //      s.setValue(value);
     //..
-    // This example shows how to append an integer a value to an array
-    // element 'a':
+    // This example shows how to append an integer a value to an array element
+    // 'a':
     //..
     //      Int32 value=5;
     //      s.appendValue(value);
     //..
-    // To set values in a complex element (a sequence or a choice)
-    // use the setElement() family of functions. This example shows
-    // how to set the value of the element 'city' in the sequence
-    // element 'address' to a string.
+    // To set values in a complex element (a sequence or a choice) use the
+    // setElement() family of functions. This example shows how to set the
+    // value of the element 'city' in the sequence element 'address' to a
+    // string.
     //..
     //      Element address;
     //      ...
     //      address.setElement("city", "New York");
     //..
-    // Methods which specify a Element name come in two forms. One
-    // which takes a Name as a parameter and one which takes a const
-    // char*.  The form which takes Name is more efficient. However, it
-    // requires the Name to have been created in the global name
-    // table.
+    // Methods which specify a Element name come in two forms. One which takes
+    // a Name as a parameter and one which takes a const char*.  The form which
+    // takes Name is more efficient. However, it requires the Name to have been
+    // created in the global name table.
     //
-    // The form which takes a const char* is less efficient but will
-    // not cause a new Name to be created in the global Name
-    // table. Because all valid Element names will have already been
-    // placed in the global name table by the API if the supplied
-    // string cannot be found in the global name table the appropriate
-    // error or exception can be returned.
+    // The form which takes a const char* is less efficient but will not cause
+    // a new Name to be created in the global Name table. Because all valid
+    // Element names will have already been placed in the global name table by
+    // the API if the supplied string cannot be found in the global name table
+    // the appropriate error or exception can be returned.
     //
-    // The API will convert data types as long as there is no loss of
-    // precision involved. So
+    // The API will convert data types as long as there is no loss of precision
+    // involved. So:
     //
-    // - A BOOL can be returned as bool, char, Int32, Int64, Float32,
-    // Float64, std::string (the string will be "true" or "false")
+    // - A BOOL can be returned as bool, char, Int32, Int64, Float32, Float64,
+    // std::string (the string will be "true" or "false")
     //
-    // - A BOOL can be set from bool, std::string (if it has a value
-    // of "y", "n", "yes", "no", "true" or "false")
+    // - A BOOL can be set from bool, std::string (if it has a value of "y",
+    // "n", "yes", "no", "true" or "false")
     //
     // - A CHAR can be returned as char, Int32, Int64, Float32, Float64,
     // std::string
@@ -500,9 +493,9 @@ class Element {
   public:
 
     Element();
-        // Create an uninitialized Element. The only valid operations
-        // to perform on an unitialized Element are assignment,
-        // isValid() and destruction.
+        // Create an uninitialized Element. The only valid operations to
+        // perform on an unitialized Element are assignment, isValid() and
+        // destruction.
 
     Element(blpapi_Element_t *element);
 
@@ -511,723 +504,653 @@ class Element {
     void rebind(blpapi_Element_t *element);
 
     void setElement(const char* name, bool value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const char* name, char value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const char* name, Int32 value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const char* name, Int64 value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const char* name, Float32 value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const char* name, Float64 value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const char* name, const Datetime& value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const char* name, const char* value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const char* name, const Name& value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' must be a valid pointer.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     void setElement(const Name& name, bool value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setElement(const Name& name, char value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setElement(const Name& name, Int32 value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setElement(const Name& name, Int64 value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setElement(const Name& name, Float32 value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setElement(const Name& name, Float64 value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setElement(const Name& name, const Datetime& value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setElement(const Name& name, const char* value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setElement(const Name& name, const Name& value);
-        // Set the specified element 'name' within this sequence or
-        // choice Element to the specified 'value'. An exception is
-        // thrown if the specified 'name' is not valid for this
-        // Element, or if the Element identified by the specified
-        // 'name' cannot be initialized from the type of the specified
-        // 'value'.
-        // 'name' cannot be an uninitialized Name.
+        // Set the specified element 'name' within this sequence or choice
+        // Element to the specified 'value'. An exception is thrown if the
+        // specified 'name' is not valid for this Element, or if the Element
+        // identified by the specified 'name' cannot be initialized from the
+        // type of the specified 'value'. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     void setValue(bool value, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void setValue(char value, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void setValue(Int32 value, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void setValue(Int64 value, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void setValue(Float32 value, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void setValue(Float64 value, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void setValue(const Datetime& value, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void setValue(const char* value, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void setValue(const Name& valueName, size_t index=0);
-        // Set the value of the specified 'index'th entry in this
-        // Element to the specified 'value'. An exception is thrown if
-        // this Element's DataType means it cannot be initialized from
-        // an instance of the supplied 'value'. An exception is thrown
-        // if 'index'>=numValues().
+        // Set the value of the specified 'index'th entry in this Element to
+        // the specified 'value'. An exception is thrown if this Element's
+        // DataType means it cannot be initialized from an instance of the
+        // supplied 'value'. An exception is thrown if 'index >= numValues()'.
 
     void appendValue(bool value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     void appendValue(char value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     void appendValue(Int32 value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     void appendValue(Int64 value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     void appendValue(Float32 value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     void appendValue(Float64 value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     void appendValue(const Datetime& value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     void appendValue(const char* value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     void appendValue(const Name& value);
-        // Appends the specified 'value' to this Element as the last
-        // element. An exception is thrown if this Element's DataType
-        // means it cannot be initialized from an instance of the
-        // supplied 'value', or if the current size of this Element
-        // (numValues()) is equal to the maximum defined by
-        // elementDefinition().maxValues().
+        // Appends the specified 'value' to this Element as the last element.
+        // An exception is thrown if this Element's DataType means it cannot be
+        // initialized from an instance of the supplied 'value', or if the
+        // current size of this Element ('numValues()') is equal to the maximum
+        // defined by 'elementDefinition().maxValues()'.
 
     Element appendElement();
-        // If this Element is an array of sequence or choice Elements
-        // append an element to this element and return the appended
-        // element. Otherwise an exception is thrown.
+        // If this Element is an array of sequence or choice Elements, then
+        // append an element to this element and return the appended element;
+        // otherwise an exception is thrown.
 
     Element setChoice(const char* selectionName);
-        // If this Element has datatype()==DataType::CHOICE then set
-        // the active Element to the one specified by 'selectionName'
-        // if 'selectionName' valid for this Element and return a
-        // reference to it. Otherwise an exception is thrown.
+        // If 'datatype() == DataType::CHOICE' and the specified
+        // 'selectionName' is valid for this Element, then set the active
+        // Element to the one specified by 'selectionName' and return it;
+        // otherwise an exception is thrown.
 
     Element setChoice(const Name& selectionName);
-        // If this Element has datatype()==DataType::CHOICE then set
-        // the active Element to the one specified by 'selectionName'
-        // if 'selectionName' valid for this Element and return a
-        // reference to it. Otherwise an exception is thrown.
+        // If 'datatype() == DataType::CHOICE' and the specified
+        // 'selectionName' is value for this Element, then set the active
+        // Element to the one specified by 'selectionName' and return it;
+        // otherwise an exception is thrown.
 
     blpapi_Element_t* handle();
 
     // ACCESSORS
 
     Name name() const;
-        // If this Element is part of a sequence or choice Element
-        // then this returns the Name of this Element within the
-        // sequence or choice Element that owns it. If this Element
-        // is not part of a sequence Element (that is it is an entire
-        // Request or Message) then the Name of the Request or Message
-        // is returned.
+        // If this Element is part of a sequence or choice Element then return
+        // the Name of this Element within the sequence or choice Element that
+        // owns it. If this Element is not part of a sequence Element (that is
+        // it is an entire Request or Message) then return the Name of the
+        // Request or Message.
 
     int datatype() const;
-        // Return the basic data type used to represent a value in
-        // this element. The possible return values are enumerated in
-        // DataType.
+        // Return the basic data type used to represent a value in this
+        // element. The possible return values are enumerated in
+        // 'blpapi_datatype'.
 
     bool isComplexType() const;
-        // Returns true if datatype()==DataType::SEQUENCE or
-        // datatype()==DataType::CHOICE.
+        // Return true if 'datatype() == DataType::SEQUENCE' or
+        // 'datatype() == DataType::CHOICE' and false otherwise.
 
     bool isArray() const;
-        // Returns true if elementDefinition().maxValues()>1 or if
-        // elementDefinition().maxValues()==UNBOUNDED.
+        // Return true if 'elementDefinition().maxValues() > 1' or
+        // 'elementDefinition().maxValues() == UNBOUNDED', and false otherwise.
 
     bool isNull() const;
-        // Returns true if this element is in a NULL state. Otherwise
-        // returns false.
+        // Return true if this element has a null value, and false otherwise.
 
     bool isReadOnly() const;
-        // Returns true if this element cannot be modified.
+        // Return true if this element cannot be modified, and false otherwise.
 
     SchemaElementDefinition elementDefinition() const;
-        // Return a reference to the read-only element definition
-        // object that defines the properties of this elements value.
+        // Return a reference to the read-only element definition object that
+        // defines the properties of this elements value.
 
     size_t numValues() const;
-        // Return the number of values contained by this element.  For
-        // scalar element types. The value returned will always be in
-        // the range defined by elementDefinition().minValues() and
-        // elementDefinition().maxValues().
+        // Return the number of values contained by this element. The number of
+        // values is 0 if 'isNull()' returns true, and no greater than 1 if
+        // 'isComplexType()' returns true. The value returned will always be in
+        // the range defined by 'elementDefinition().minValues()' and
+        // 'elementDefinition().maxValues()'.
 
     size_t numElements() const;
-        // Return the number of elements contained by this element if
-        // isComplexType()==true. If the DataType is CHOICE this will
-        // always return 1. If the DataType is SEQUENCE this may
-        // return any number (including 0). If isComplex()==false this
-        // returns 0.
+        // Return the number of elements contained by this element.  The number
+        // of elements is 0 if 'isComplex()' returns false, and no greater than
+        // 1 if the Datatype is CHOICE; if the DataType is SEQUENCE this may
+        // return any number (including 0).
 
     bool isValid() const;
-        // Returns true if this Element is valid. An Element created
-        // using the default constructor is not valid until it has had
-        // a value assigned to it.
+        // Return true if this Element is valid. An Element created using the
+        // default constructor is not valid until it has had a value assigned
+        // to it.
 
     bool isNullValue(size_t position = 0) const;
-        // Returns true if the value of the sub-element at the specified 
-        // 'position' in a sequence or choice element is a "NULL" value.
-        // An exception is thrown if 'position'>=numElements().
+        // Return true if the value of the sub-element at the specified
+        // 'position' in a sequence or choice element is a null value. An
+        // exception is thrown if 'position >= numElements()'.
 
     bool hasElement(const char* name, bool excludeNullElements = false) const;
     bool hasElement(const Name& name, bool excludeNullElements = false) const;
-        // Returns true if this element is a choice or sequence
-        // (isComplexType()==true) and it contains an Element with the
+        // Return true if this Element is a choice or sequence
+        // ('isComplexType() == true') and it contains an Element with the
         // specified 'name'.
 
     int getValueAs(bool* result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     int getValueAs(char* result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     int getValueAs(Int32* result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     int getValueAs(Int64* result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     int getValueAs(Float32* result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     int getValueAs(Float64* result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     int getValueAs(Datetime* result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'. Note that this function will
+        // not necessarily set all fields of '*result' -- callers should check
+        // 'result->hasParts(...)' or 'result->parts()' before accessing the
+        // fields of 'result'.
 
     int getValueAs(std::string* result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     int getValueAs(Element *result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     int getValueAs(Name *result, size_t index=0) const;
-        // Set the specified 'result' to the value of the specified
-        // 'index'th entry in this Element and return 0. An error
-        // (non-zero) is returned if the DataType of this Element
-        // cannot be converted to the type of 'result' or if 'index'
-        // is greater than the current size of this Element
-        // (numValues()).
+        // Set the specified 'result' to the value of the specified 'index'th
+        // entry in this Element and return 0. An error (non-zero) is returned
+        // if the DataType of this Element cannot be converted to the type of
+        // 'result' or if 'numValues() <= index'.
 
     bool getValueAsBool(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // bool. An exception is thrown if the DataType of this
-        // Element cannot be converted to bool or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Return the specified 'index'th entry in the Element as a bool. An
+        // exception is thrown if the DataType of this Element cannot be
+        // converted to bool or if 'numValues() <= index'.
 
     char getValueAsChar(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // char. An exception is thrown if the DataType of this
-        // Element cannot be converted to char or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Return the specified 'index'th entry in the Element as a char. An
+        // exception is thrown if the DataType of this Element cannot be
+        // converted to char or if 'numValues() <= index'.
 
     Int32 getValueAsInt32(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // Int32. An exception is thrown if the DataType of this
-        // Element cannot be converted to Int32 or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Return the specified 'index'th entry in the Element as a Int32. An
+        // exception is thrown if the DataType of this Element cannot be
+        // converted to Int32 or if 'numValues() <= index'.
 
     Int64 getValueAsInt64(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // Int64. An exception is thrown if the DataType of this
-        // Element cannot be converted to Int64 or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Returns the specified 'index'th entry in the Element as a Int64. An
+        // exception is thrown if the DataType of this Element cannot be
+        // converted to Int64 or if 'numValues() <= index'.
 
     Float32 getValueAsFloat32(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // Float32. An exception is thrown if the DataType of this
-        // Element cannot be converted to Float32 or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Returns the specified 'index'th entry in the Element as a Float32.
+        // An exception is thrown if the DataType of this Element cannot be
+        // converted to Float32 or if 'numValues() <= index'.
 
     Float64 getValueAsFloat64(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // Float64. An exception is thrown if the DataType of this
-        // Element cannot be converted to Float64 or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Returns the specified 'index'th entry in the Element as a Float64.
+        // An exception is thrown if the DataType of this Element cannot be
+        // converted to Float64 or if 'numValues() <= index'.
 
     Datetime getValueAsDatetime(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // Datetime. An exception is thrown if the DataType of this
-        // Element cannot be converted to Datetime or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Returns the specified 'index'th entry in the Element as a Datetime.
+        // An exception is thrown if the DataType of this Element cannot be
+        // converted to Datetime or if 'numValues() <= index'. Note that this
+        // function will not necessarily set all fields of the returned value
+        // -- callers should check 'rv.hasParts(...)' or 'rv.parts()' before
+        // accessing the fields of the returned value 'rv'.
 
     const char* getValueAsString(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // pointer to a null-terminated string. An exception is thrown
-        // if the DataType of this Element cannot be converted to a
-        // null-terminated string or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()). The pointer returned remains valid until
+        // Returns the specified 'index'th entry in the Element as a pointer to
+        // a null-terminated string. An exception is thrown if the DataType of
+        // this Element cannot be converted to a null-terminated string or if
+        // 'numValues() <= index'. The pointer returned remains valid until
         // this Element is destroyed.
 
     Element getValueAsElement(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as an
-        // Element. An exception is thrown if the DataType of this
-        // Element cannot be converted to an Element or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Returns the specified 'index'th entry in the Element as an Element.
+        // An exception is thrown if the DataType of this Element cannot be
+        // converted to an Element or if 'numValues() <= index'.
 
     Name getValueAsName(size_t index=0) const;
-        // Returns the specified 'index'th entry in the Element as a
-        // Name. An exception is thrown if the DataType of this
-        // Element cannot be converted to Name or if 'index' is
-        // greater than the current size of this Element
-        // (numValues()).
+        // Returns the specified 'index'th entry in the Element as a Name. An
+        // exception is thrown if the DataType of this Element cannot be
+        // converted to Name or if 'numValues() <= index'.
 
     int getElement(Element* result, const char *name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // return that Element at the location specified by 'result'
-        // and return 0. Otherwise, return an error (non-zero).
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' then load that
+        // element into the specified 'result' and return 0; otherwise, return
+        // an error (non-zero). The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string.
 
     int getElement(Element* result, const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // return that Element at the location specified by 'result'
-        // and return 0. Otherwise, return an error (non-zero).
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' then load that
+        // element into the specified 'result' and return 0; otherwise, return
+        // an error (non-zero). The behavior of this function is undefined if
+        // 'name' is uninitialized.
 
     int getElement(Element *result, size_t position) const;
-        // If this Element is either a sequence or a choice and
-        // numElements() is greater than the specified 'position'
-        // return the 'position'th element at the location specified
-        // by 'result' and return 0. Otherwise, return an error
-        // (non-zero).
+        // If this Element is either a sequence or a choice and 'numElements()'
+        // is greater than the specified 'position', then load the element at
+        // 'position' into the specified 'result' and return 0; otherwise
+        // return an error (non-zero).
 
     Element getElement(size_t position) const;
-        // If this Element is either a sequence or a choice and
-        // numElements() is greater than the specified 'position'
-        // return the 'position'th element. Otherwise, an exception is
-        // thrown.
+        // If this Element is either a sequence or a choice and 'numElements()'
+        // is greater than the specified 'position' return the 'position'th
+        // element. Otherwise, an exception is thrown.
 
     Element getElement(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // return that Element. Otherwise, an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name', then return that
+        // Element. Otherwise, an exception is thrown. The behavior of this
+        // function is undefined if 'name' is uninitialized.
 
     Element getElement(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // return that Element. Otherwise, an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name', then return that
+        // Element. Otherwise, an exception is thrown. The behavior of this
+        // function is undefined unless 'name' is a valid null-terminated
+        // string.
 
     bool getElementAsBool(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a bool then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a bool then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string.
 
     bool getElementAsBool(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a bool then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a bool then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // if 'name' is uninitialized.
 
     char getElementAsChar(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a char then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a char then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string.
 
     char getElementAsChar(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a char then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a char then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // if 'name' is uninitialized.
 
     Int32 getElementAsInt32(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as an Int32 then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as an Int32 then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string.
 
     Int32 getElementAsInt32(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as an Int32 then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as an Int32 then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // if 'name' is uninitialized.
 
     Int64 getElementAsInt64(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as an Int64 then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as an Int64 then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string.
 
     Int64 getElementAsInt64(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as an Int64 then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as an Int64 then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // if 'name' is uninitialized.
 
     Float32 getElementAsFloat32(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a Float32 then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a Float32 then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string.
 
     Float32 getElementAsFloat32(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a Float32 then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a Float32 then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // if 'name' is uninitialized.
 
     Float64 getElementAsFloat64(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a Float64 then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a Float64 then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string.
 
     Float64 getElementAsFloat64(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a Float64 then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a Float64 then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // if 'name' is uninitialized.
 
     Datetime getElementAsDatetime(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a Datetime then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a Datetime then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string. Note this function
+        // will not necessarily set all fields of the returned value -- callers
+        // should check 'rv.hasParts(...)' or 'rv.parts()' before accessing the
+        // fields of the returned value 'rv'.
 
     Datetime getElementAsDatetime(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as Datetime then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as Datetime then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // if 'name' is uninitialized. Note that this function will not
+        // necessarily set all fields of the returned value -- callers should
+        // check 'rv.hasParts(...)' or 'rv.parts()' before accessing the fields
+        // of the returned value 'rv'.
 
     const char* getElementAsString(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a null-terminated string then a
-        // pointer to a string is returned. The pointer remains valid
-        // until this Element is destroyed. Otherwise an exception is
-        // thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a null-terminated string then a pointer to a string is
+        // returned. The pointer remains valid until this Element is destroyed.
+        // Otherwise an exception is thrown. The behavior of this function is
+        // undefined unless 'name' is a valid null-terminated string.
 
     const char* getElementAsString(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a null-terminated string then a
-        // pointer to a string is returned. The pointer remains valid
-        // until this Element is destroyed. Otherwise an exception is
-        // thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a null-terminated string then a pointer to a string is
+        // returned. The pointer remains valid until this Element is destroyed.
+        // Otherwise an exception is thrown. The behavior of this function is
+        // undefined if 'name' is uninitialized.
 
     Name getElementAsName(const char* name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a Name then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' must be a valid pointer.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a Name then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // unless 'name' is a valid null-terminated string.
 
     Name getElementAsName(const Name& name) const;
-        // If this Element is either a sequence or a choice and
-        // contains a valid Element identified by the specified 'name'
-        // which can be returned as a Name then its value is
-        // returned. Otherwise an exception is thrown.
-        // 'name' cannot be an uninitialized Name.
+        // If this Element is either a sequence or a choice and contains a
+        // valid Element identified by the specified 'name' which can be
+        // returned as a Name then its value is returned. Otherwise an
+        // exception is thrown. The behavior of this function is undefined
+        // if 'name' is uninitialized.
 
     Element getChoice() const;
         // Return the selection name of this element if this element is a
-        // "choice" element.  Throw exception otherwise.
+        // "choice" element. Otherwise, an exception is thrown.
 
     const blpapi_Element_t* handle() const;
 
     std::ostream& print(std::ostream& stream,
-                        int level=0,
-                        int spacesPerLevel=4) const;
+                        int           level=0,
+                        int           spacesPerLevel=4) const;
         // Format this Element to the specified output 'stream' at the
-        // (absolute value of) the optionally specified indentation
-        // 'level' and return a reference to 'stream'. If 'level' is
-        // specified, optionally specify 'spacesPerLevel', the number
-        // of spaces per indentation level for this and all of its
-        // nested objects. If 'level' is negative, suppress indentation
-        // of the first line. If 'spacesPerLevel' is negative, format
-        // the entire output on one line, suppressing all but the
-        // initial indentation (as governed by 'level').
+        // (absolute value of) the optionally specified indentation 'level' and
+        // return a reference to 'stream'. If 'level' is specified, optionally
+        // specify 'spacesPerLevel', the number of spaces per indentation level
+        // for this and all of its nested objects. If 'level' is negative,
+        // suppress indentation of the first line. If 'spacesPerLevel' is
+        // negative, format the entire output on one line, suppressing all but
+        // the initial indentation (as governed by 'level').
 };
 
 // FREE OPERATORS

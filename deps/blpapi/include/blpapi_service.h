@@ -261,8 +261,8 @@ class Service {
 
   public:
     Service();
-        // Create an unitialized Service. The only valid operations on
-        // an unitialized Service are assignment, isValid() and
+        // Create an uninitialized Service. The only valid operations on
+        // an uninitialized Service are assignment, isValid() and
         // destruction.
 
     Service(blpapi_Service_t *handle);
@@ -294,7 +294,7 @@ class Service {
                                    const char* authorizationOperation=0) const;
         // Returns an empty Request object for the specified
         // 'authorizationOperation'. If the 'authorizationOperation'
-        // does not indentify a valid operation for this Service then
+        // does not identify a valid operation for this Service then
         // an exception is thrown.
         //
         // An application must populate the Request before issuing it

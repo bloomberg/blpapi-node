@@ -146,18 +146,18 @@ class SubscriptionList {
 
     // MANIPULATORS
 
-    int add(char const* topic);
+    int add(const char* topic);
         // Add the specified 'topic' to this SubscriptionList,
         // associating an internally generated CorrelationId with
         // it. The topic string may include options.
 
-    int add(char const* topic,
+    int add(const char* topic,
             const CorrelationId& correlationID);
         // Add the specified 'topic' to this SubscriptionList,
         // associating the specified 'correlationID' with it. The
         // topic string may include options.
 
-    int add(char const* topic,
+    int add(const char* topic,
             const char* fields,
             const char* options,
             const CorrelationId& correlationId);
@@ -167,7 +167,7 @@ class SubscriptionList {
         // 'fields' must be specified as a comma separated list. The
         // 'options' must be specified as a ampersand separated list.
 
-    int add(char const* topic,
+    int add(const char* topic,
             const std::vector<std::string>& fields,
             const std::vector<std::string>& options,
             const CorrelationId& correlationId);
@@ -203,7 +203,7 @@ class SubscriptionList {
         // in this SubscriptionList. An exception is thrown if
         // 'index'>=size().
 
-    char const* topicStringAt(size_t index) const;
+    const char* topicStringAt(size_t index) const;
         // Return a pointer to a null terminated string which contains
         // the full topic string (including any field and option
         // portions) of the 'index'th entry in this
@@ -250,7 +250,7 @@ SubscriptionList::~SubscriptionList()
 
 
 inline
-int SubscriptionList::add(char const* topic)
+int SubscriptionList::add(const char* topic)
 {
     blpapi_CorrelationId_t correlationId;
     std::memset(&correlationId, 0, sizeof(correlationId));
@@ -261,7 +261,7 @@ int SubscriptionList::add(char const* topic)
 }
 
 inline
-int SubscriptionList::add(char const* topic,
+int SubscriptionList::add(const char* topic,
                                  const CorrelationId& correlationId)
 {
     return blpapi_SubscriptionList_add(d_handle_p,
@@ -273,7 +273,7 @@ int SubscriptionList::add(char const* topic,
 
 inline
 int SubscriptionList::add(
-        char const* topic,
+        const char* topic,
         const char* fields,
         const char* options,
         const CorrelationId& correlationId)
@@ -290,7 +290,7 @@ int SubscriptionList::add(
 
 inline
 int SubscriptionList::add(
-        char const* topic,
+        const char* topic,
         const std::vector<std::string>& fields,
         const std::vector<std::string>& options,
         const CorrelationId& correlationId)
@@ -377,7 +377,7 @@ CorrelationId SubscriptionList::correlationIdAt(size_t index) const
 }
 
 inline
-char const* SubscriptionList::topicStringAt(size_t index) const
+const char* SubscriptionList::topicStringAt(size_t index) const
 {
     const char* result;
 

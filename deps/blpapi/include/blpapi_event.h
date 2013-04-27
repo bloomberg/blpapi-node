@@ -174,7 +174,7 @@ class Event {
 
     Event();
         // Construct an uninitialized Event. The only valid operations
-        // on an unitialized Event are assignment, isValid() and
+        // on an uninitialized Event are assignment, isValid() and
         // destruction.
 
     Event(blpapi_Event_t *handle);

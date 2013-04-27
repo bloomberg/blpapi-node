@@ -34,6 +34,7 @@
 #include <blpapi_defs.h>
 #include <blpapi_correlationid.h>
 #include <blpapi_streamproxy.h>
+#include <blpapi_subscriptionlist.h>
 #include <blpapi_versioninfo.h>
 #include <stddef.h>
 
@@ -142,7 +143,16 @@ typedef struct blpapi_FunctionEntries {
         const char*,
         const blpapi_Name_t*,
         const blpapi_HighPrecisionDatetime_t*);
-
+    int (*blpapi_Session_resubscribeWithId)(
+        blpapi_Session_t*,
+        const blpapi_SubscriptionList_t*,
+        int,
+        const char*,
+        int);
+    int (*blpapi_EventFormatter_setValueNull)(
+        blpapi_EventFormatter_t *,
+        const char *,
+        const blpapi_Name_t *);
 } blpapi_FunctionEntries_t;
 
 BLPAPI_EXPORT extern size_t                   g_blpapiFunctionTableSize;

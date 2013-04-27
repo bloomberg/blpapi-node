@@ -123,8 +123,8 @@ class Identity {
         // Assume ownership of the raw handle
 
     Identity();
-        // Create an unitialized Identity. The only valid operations
-        // on an unitialized Identity are assignment, isValid() and
+        // Create an uninitialized Identity. The only valid operations
+        // on an uninitialized Identity are assignment, isValid() and
         // destruction.
 
     Identity(const Identity& original);
@@ -142,53 +142,55 @@ class Identity {
     // ACCESSORS
     bool hasEntitlements(const Service& service,
                          const int *entitlementIds,
-                         size_t count,
-                         int *failedEntitlements=0,
-                         int *failedEntitlementsCount=0) const;
-        // Returns true if this Identity is authorized for all
-        // 'count' entitlement IDs in the array at the specified
-        // location 'entitlementIds' on the specified
-        // 'service'. Otherwise returns false and sets the location
-        // specified by 'failedEntitlementsCount' if it is non-null to
-        // the number of entitlementIds which the user is not entitled
-        // to and returns the failing entitlement IDs at the location
-        // specified by 'failedEntitlements' if it is non-null.
-        //
-        // The behavior is undefined if 'entitlementIds' does not
-        // point to 'count' valid entitlement Ids or if the location
-        // specified by 'failedEntitlements' is non-null and does not
-        // have room for at least 'count' int's.
+                         size_t numEntitlements) const;
+        // Return true if this 'Identity' is authorized for the specified
+        // 'service' and the first 'numEntitlements' elements of the specified
+        // 'entitlementIds' array; otherwise return false. The behavior is
+        // undefined unless 'entitlementIds' is an array containing at least
+        // 'numEntitlements' elements.
+
+    bool hasEntitlements(const Service& service,
+                         const int *entitlementIds,
+                         size_t numEntitlements,
+                         int *failedEntitlements,
+                         int *failedEntitlementsCount) const;
+        // Return true if this 'Identity' is authorized for the specified
+        // 'service' and the first 'numEntitlements' elements of the specified
+        // 'entitlementIds' array; otherwise fill the specified
+        // 'failedEntitlements' array with the subset of 'entitlementIds' this
+        // 'Identity' is not authorized for, load the number of such
+        // entitlements into the specified 'failedEntitlementsCount', and
+        // return false. The behavior is undefined unless 'entitlementIds' and
+        // 'failedEntitlements' are arrays containing at least
+        // 'numEntitlements' elements, and 'failedEntitlementsCount' is
+        // non-null.
 
     bool hasEntitlements(const Service& service,
                          const Element& entitlementIds,
                          int *failedEntitlements,
                          int *failedEntitlementsCount) const;
-        // Returns true if this Identity is authorized for all the
-        // entitlement Ids contained in the specified 'entitlementIds'
-        // Element on the specified 'service'. Otherwise returns false
-        // and sets the location specified by
-        // 'failedEntitlementsCount' if it is non-null to the number
-        // of entitlementIds which the user is not entitled to and
-        // returns the failing entitlement IDs at the location
-        // specified by 'failedEntitlements' if it is non-null.
-        //
-        // The behavior is undefined if the location specified by
-        // 'failedEntitlements' does not have room for at least as
-        // many entitlement Ids as are contained in 'entitlementIds'.
+        // Return true if this 'Identity' is authorized for the specified
+        // 'service' and for each of the entitlement IDs contained in the
+        // specified 'entitlementIds', which must be an 'Element' which is an
+        // array of integers; otherwise, fill the specified
+        // 'failedEntitlements' array with the subset of entitlement IDs this
+        // 'Identity' is not authorized for, load the number of such
+        // entitlements into the specified 'failedEntitlementsCount', and
+        // return false. The behavior is undefined unless 'failedEntitlements'
+        // is an array containing at least 'entitlementIds.numValues()'
+        // elements and 'failedEntitlementsCount' is non-null.
 
     bool isValid() const;
-        // Returns true if this Identity is valid. Valid does not
-        // indicate that this Identity has been authorized. Use
-        // hasEntitlements() to determine what (if anything)
-        // entitlements a Identity has.
+        // Return true if this 'Identity' is valid; otherwise return false.
+        // Note that a valid 'Identity' has not necessarily been authorized.
+        // This function is deprecated.
 
     bool isAuthorized(const Service& service) const;
-        // Returns true if the user handle is authorized for the
-        // specified Service. Use hasEntitlements() to determine what
-        // (if anything) entitlements a Identity has.
+        // Return true if this 'Identity' is authorized for the specified
+        // 'service'; otherwise return false.
 
     SeatType getSeatType() const;
-        // Returns seat type of this identity.
+        // Return the seat type of this 'Identity'.
 
     blpapi_Identity_t* handle() const;
 };
@@ -257,6 +259,22 @@ inline
 bool Identity::hasEntitlements(
         const Service& service,
         const int *entitlementIds,
+        size_t numEntitlements) const
+{
+    return blpapi_Identity_hasEntitlements(
+            d_handle_p,
+            service.handle(),
+            0,
+            entitlementIds,
+            numEntitlements,
+            0,
+            0) ? true : false;
+}
+
+inline
+bool Identity::hasEntitlements(
+        const Service& service,
+        const int *entitlementIds,
         size_t numEntitlements,
         int *failedEntitlements,
         int *failedEntitlementsCount) const
@@ -298,7 +316,7 @@ inline
 bool Identity::isAuthorized(const Service& service) const
 {
     return blpapi_Identity_isAuthorized(d_handle_p,
-                                        service.handle()) ?  true : false;
+                                        service.handle()) ? true : false;
 }
 
 inline

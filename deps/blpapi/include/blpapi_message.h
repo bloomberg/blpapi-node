@@ -146,13 +146,14 @@ class Message {
     Message(blpapi_Message_t *handle, bool clonable = false);
         // Construct the Message with the specified 'handle' and set the
         // isCloned flag with the specified value of 'clonable'. This flag
-        // will used to realease reference on message handle when the
+        // will used to release reference on message handle when the
         // destructor is called.
 
     Message(const Message& original);
         // Construct the message using the handle of the original. This will
-        // add a referece to the handle and set the d_isCloned flag to true, to
-        // ensure that release reference is called when destructor is invoked.
+        // add a reference to the handle and set the d_isCloned flag to true,
+        // to ensure that release reference is called when destructor is
+        // invoked.
 
     ~Message();
         // Destroy this message. Call release reference on handle if the
@@ -162,7 +163,7 @@ class Message {
     Message& operator=(const Message& rhs);
         // Copies the message specified by 'rhs' into the current message and
         // set the d_isCloned flag with the specified value of 'true'. This
-        // flag will used to realease reference on message handle when the
+        // flag will used to release reference on message handle when the
         // destructor is called.
 
     // ACCESSORS
