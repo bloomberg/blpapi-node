@@ -125,9 +125,9 @@ int blpapi_HighPrecisionDatetime_print(
 namespace BloombergLP {
 namespace blpapi {
 
-                         // ====================
-                         // struct DatetimeParts
-                         // ====================
+                            // ====================
+                            // struct DatetimeParts
+                            // ====================
 
 struct DatetimeParts {
     // Bit flags and masks used to determine which parts of a Datetime are
@@ -148,8 +148,7 @@ struct DatetimeParts {
         , MINUTES         = BLPAPI_DATETIME_MINUTES_PART         // minutes is set
         , SECONDS         = BLPAPI_DATETIME_SECONDS_PART         // seconds is set
         , FRACSECONDS     = BLPAPI_DATETIME_FRACSECONDS_PART     // fraction-of-second (both millisecond and picosecond) is set
-        , MILLISECONDS    = BLPAPI_DATETIME_MILLISECONDS_PART
-            // 'MILLISECONDS' is a (legacy) synonym for 'FRACSECONDS'
+        , MILLISECONDS    = BLPAPI_DATETIME_MILLISECONDS_PART    // 'MILLISECONDS' is a (legacy) synonym for 'FRACSECONDS'
         , DATE            = BLPAPI_DATETIME_DATE_PART            // year, month, and day are set
         , TIME            = BLPAPI_DATETIME_TIME_PART            // hours, minutes, and seconds are set
         , TIMEFRACSECONDS = BLPAPI_DATETIME_TIMEFRACSECONDS_PART // hours, minutes, seconds, and fraction-of-second are set
@@ -157,53 +156,97 @@ struct DatetimeParts {
     };
 };
 
-                         // ==============
-                         // class Datetime
-                         // ==============
+                               // ==============
+                               // class Datetime
+                               // ==============
 
 class Datetime {
     // Represents a date and/or time.
     //
     // Datetime can represent a date and/or a time or any combination of the
-    // components of a date and time. The value is represented as eight parts
+    // components of a date and time.  The value is represented as eight parts
     // which can be set or queried independently.
     //
-    // These parts are: year; month; day (of month); hour; minute; second;
-    // milliseconds and offset (time zone as minutes ahead of UTC).
+    // These parts are: year; month (from January as 1 to December as 12); day
+    // (of month, from 1 to 31); hour (from 0 to 23); minute (0 to 59); second
+    // (0 to 59); fraction-of-second (logically representing arbitrary
+    // precision, with the current interface providing picosecond resolution);
+    // and offset (time zone as minutes ahead of UTC).
     //
     // Methods are provided to set and query the parts individually and in
-    // groups. For example, setDate() and setTime(). It is also possible to
-    // determine which parts of the Datetime have been set.
+    // groups, e.g. 'setDate()' and 'setTime()'.  It is also possible to
+    // determine which parts of the 'Datetime' have been set (via the 'parts()'
+    // method).
 
     blpapi_HighPrecisionDatetime_t d_value;
 
     static bool isLeapYear(int year);
 
+    struct TimeTag {};
+    Datetime(unsigned hours,
+             unsigned minutes,
+             unsigned seconds,
+             TimeTag);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', and 'seconds'.  The
+        // behavior is undefined unless 'hours', 'minutes', and 'seconds'
+        // represent a valid time as specified by the 'isValidTime' function.
+        // The resulting 'Datetime' object has the parts specified by 'TIME'
+        // set, and all other parts unset.  In particular, the 'FRACSECONDS'
+        // part is unset.
+        // Note that the final 'TimeTag' parameter is used purely to
+        // disambiguate this constructor from that for year, month, and day.
+        // A constuctor for 4 PM would be written as follows:
+        //..
+        //  Datetime dt = Datetime(16, 0, 0, Datetime::TimeTag());
+        //..
+        // Note that this constructor is intended for internal use only; client
+        // code should use the 'createTime' interface.
+
   public:
     struct Milliseconds {
         int d_msec;
         explicit Milliseconds(int milliseconds);
+            // The behavior is undefined unless '0 <= milliseconds < 1000'.
     };
     struct Microseconds {
         int d_usec;
         explicit Microseconds(int microseconds);
+            // The behavior is undefined unless
+            // '0 <= microseconds < 1,000,000'.
     };
     struct Nanoseconds {
         int d_nsec;
         explicit Nanoseconds(int nanoseconds);
+            // The behavior is undefined unless
+            // '0 <= nanoseconds < 1,000,000,000'.
     };
     struct Picoseconds {
         long long d_psec;
         explicit Picoseconds(long long picoseconds);
+            // The behavior is undefined unless
+            // '0 <= picoseconds < 1,000,000,000,000'.
+    };
+    struct Offset {
+        short d_minutesAheadOfUTC;
+        explicit Offset(short minutesAheadOfUTC);
+            // The behavior is undefined unless
+            // '-840 <= minutesAheadOfUTC <= 840'.
     };
 
     static bool isValidDate(int year, int month, int day);
+        // Return 'true' if the specified 'year', 'month', and 'day' represent
+        // a valid calendar date, and 'false' otherwise.  Note that many
+        // functions within 'Datetime' provide defined behavior only when valid
+        // dates are provided as arguments.
 
-    static bool isValidTime(int hours,
-                            int minutes,
-                            int seconds,
-                            int milliSeconds);
-
+    static bool isValidTime(int          hours,
+                            int          minutes,
+                            int          seconds);
+    static bool isValidTime(int          hours,
+                            int          minutes,
+                            int          seconds,
+                            int          milliSeconds);
     static bool isValidTime(int          hours,
                             int          minutes,
                             int          seconds,
@@ -220,12 +263,234 @@ class Datetime {
                             int          minutes,
                             int          seconds,
                             Picoseconds  fractionOfSecond);
+        // Return 'true' if the specified 'hours', 'minutes', 'seconds', and
+        // (optionally specified) 'milliseconds' or 'fractionOfSecond'
+        // represent a valid time of day, and 'false' otherwise.  Note that
+        // many functions within 'Datetime' provide defined behavior only when
+        // valid times are provided as arguments.
 
     // CREATORS
+    static Datetime createDatetime(unsigned year,
+                                   unsigned month,
+                                   unsigned day,
+                                   unsigned hours,
+                                   unsigned minutes,
+                                   unsigned seconds);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'year', 'month', 'day', 'hours', 'minutes', and 'seconds'
+        // parts.  The behavior is undefined unless 'year', 'month', and 'day'
+        // represent a valid date as specified by the 'isValidDate' function,
+        // and 'hours', 'minutes', and 'seconds' represent a valid time as
+        // specified by the 'isValidTime' function.  The resulting 'Datetime'
+        // object has the parts specified by 'DATE' and 'TIME' set, and the
+        // 'OFFSET' and 'FRACSECONDS' parts unset.
+
+    static Datetime createDatetime(unsigned year,
+                                   unsigned month,
+                                   unsigned day,
+                                   unsigned hours,
+                                   unsigned minutes,
+                                   unsigned seconds,
+                                   Offset   offset);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'year', 'month', 'day', 'hours', 'minutes', 'seconds', and
+        // 'offset' parts.  The behavior is undefined unless 'year', 'month',
+        // and 'day' represent a valid date as specified by the 'isValidDate'
+        // function, and 'hours', 'minutes', and 'seconds' represent a valid
+        // time as specified by the 'isValidTime' function.  The resulting
+        // 'Datetime' object has the parts specified by 'DATE', 'TIME', and
+        // 'OFFSET' set, and the 'FRACSECONDS' part unset.
+
+    static Datetime createDatetime(unsigned     year,
+                                   unsigned     month,
+                                   unsigned     day,
+                                   unsigned     hours,
+                                   unsigned     minutes,
+                                   unsigned     seconds,
+                                   Milliseconds fractionOfSecond);
+    static Datetime createDatetime(unsigned     year,
+                                   unsigned     month,
+                                   unsigned     day,
+                                   unsigned     hours,
+                                   unsigned     minutes,
+                                   unsigned     seconds,
+                                   Microseconds fractionOfSecond);
+    static Datetime createDatetime(unsigned    year,
+                                   unsigned    month,
+                                   unsigned    day,
+                                   unsigned    hours,
+                                   unsigned    minutes,
+                                   unsigned    seconds,
+                                   Nanoseconds fractionOfSecond);
+    static Datetime createDatetime(unsigned    year,
+                                   unsigned    month,
+                                   unsigned    day,
+                                   unsigned    hours,
+                                   unsigned    minutes,
+                                   unsigned    seconds,
+                                   Picoseconds fractionOfSecond);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'year', 'month', 'day', 'hours', 'minutes', 'seconds', and
+        // 'fractionOfSecond'.  The behavior is undefined unless 'year',
+        // 'month', and 'day' represent a valid date as specified by the
+        // 'isValidDate' function, and 'hours', 'minutes', 'seconds', and
+        // 'fractionOfSecond' represent a valid time as specified by the
+        // 'isValidTime' function.  The resulting 'Datetime' object has the
+        // parts specified by 'DATE' and 'TIMEFRACSECONDS' set, and the
+        // 'OFFSET' part unset.
+
+    static Datetime createDatetime(unsigned     year,
+                                   unsigned     month,
+                                   unsigned     day,
+                                   unsigned     hours,
+                                   unsigned     minutes,
+                                   unsigned     seconds,
+                                   Milliseconds fractionOfSecond,
+                                   Offset       offset);
+    static Datetime createDatetime(unsigned     year,
+                                   unsigned     month,
+                                   unsigned     day,
+                                   unsigned     hours,
+                                   unsigned     minutes,
+                                   unsigned     seconds,
+                                   Microseconds fractionOfSecond,
+                                   Offset       offset);
+    static Datetime createDatetime(unsigned     year,
+                                   unsigned     month,
+                                   unsigned     day,
+                                   unsigned     hours,
+                                   unsigned     minutes,
+                                   unsigned     seconds,
+                                   Nanoseconds  fractionOfSecond,
+                                   Offset       offset);
+    static Datetime createDatetime(unsigned     year,
+                                   unsigned     month,
+                                   unsigned     day,
+                                   unsigned     hours,
+                                   unsigned     minutes,
+                                   unsigned     seconds,
+                                   Picoseconds  fractionOfSecond,
+                                   Offset       offset);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'year', 'month', 'day', 'hours', 'minutes', 'seconds',
+        // 'fractionOfSecond', and 'offset'.  The behavior is undefined unless
+        // 'year', 'month', and 'day' represent a valid date as specified by
+        // the 'isValidDate' function, and 'hours', 'minutes', 'seconds', and
+        // 'fractionOfSecond' represent a valid time as specified by the
+        // 'isValidTime' function.  The resulting 'Datetime' object has all
+        // parts set.
+
+    static Datetime createDate(unsigned year,
+                               unsigned month,
+                               unsigned day);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'year', 'month', and 'day'.  The behavior is undefined
+        // unless 'year', 'month', and 'day' represent a valid date as
+        // specified by the 'isValidDate' function.  The resulting 'Datetime'
+        // object has the parts specified by 'DATE' set, and all other parts
+        // unset.
+
+    static Datetime createTime(unsigned hours,
+                               unsigned minutes,
+                               unsigned seconds);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', and 'seconds'.  The
+        // behavior is undefined unless 'hours', 'minutes', and 'seconds'
+        // represent a valid time as specified by the 'isValidTime' function.
+        // The resulting 'Datetime' object has the parts specified by 'TIME'
+        // set, and all other parts unset.  Note that the 'FRACSECONDS' part is
+        // unset.
+
+    static Datetime createTime(unsigned hours,
+                               unsigned minutes,
+                               unsigned seconds,
+                               Offset   offset);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', 'seconds', and 'offset'.  The
+        // behavior is undefined unless 'hours', 'minutes', and 'seconds'
+        // represent a valid time as specified by the 'isValidTime' function.
+        // The resulting 'Datetime' object has the parts specified by 'TIME'
+        // and 'OFFSET' set, and all other parts unset.  Note that the
+        // 'FRACSECONDS' part is unset.
+
+    static Datetime createTime(unsigned hours,
+                               unsigned minutes,
+                               unsigned seconds,
+                               unsigned milliseconds);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', 'seconds', and 'milliseconds'.  The
+        // behavior is undefined unless 'hours', 'minutes', 'seconds', and
+        // 'milliseconds' represent a valid time as specified by the
+        // 'isValidTime' function.  The resulting 'Datetime' object has the
+        // parts specified by 'TIMEFRACSECONDS' set, and all other parts unset.
+
+    static Datetime createTime(unsigned hours,
+                               unsigned minutes,
+                               unsigned seconds,
+                               unsigned milliseconds,
+                               Offset   offset);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', 'seconds', 'milliseconds', and
+        // 'offset'.  The behavior is undefined unless 'hours', 'minutes',
+        // 'seconds', and 'milliseconds' represent a valid time as specified by
+        // the 'isValidTime' function.  The resulting 'Datetime' object has the
+        // parts specified by 'TIMEFRACSECONDS' and 'OFFSET' set, and all other
+        // parts unset.
+
+    static Datetime createTime(unsigned     hours,
+                               unsigned     minutes,
+                               unsigned     seconds,
+                               Milliseconds fractionOfSecond);
+    static Datetime createTime(unsigned     hours,
+                               unsigned     minutes,
+                               unsigned     seconds,
+                               Microseconds fractionOfSecond);
+    static Datetime createTime(unsigned     hours,
+                               unsigned     minutes,
+                               unsigned     seconds,
+                               Nanoseconds  fractionOfSecond);
+    static Datetime createTime(unsigned     hours,
+                               unsigned     minutes,
+                               unsigned     seconds,
+                               Picoseconds  fractionOfSecond);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', 'seconds', and 'fractionOfSecond'.
+        // The behavior is undefined unless 'hours', 'minutes', 'seconds', and
+        // 'fractionOfSecond' represent a valid time as specified by the
+        // 'isValidTime' function.  The resulting 'Datetime' object has the
+        // parts specified by 'TIMEFRACSECONDS' set, and all other
+        // parts unset.
+
+    static Datetime createTime(unsigned     hours,
+                               unsigned     minutes,
+                               unsigned     seconds,
+                               Milliseconds fractionOfSecond,
+                               Offset       offset);
+    static Datetime createTime(unsigned     hours,
+                               unsigned     minutes,
+                               unsigned     seconds,
+                               Microseconds fractionOfSecond,
+                               Offset       offset);
+    static Datetime createTime(unsigned     hours,
+                               unsigned     minutes,
+                               unsigned     seconds,
+                               Nanoseconds  fractionOfSecond,
+                               Offset       offset);
+    static Datetime createTime(unsigned     hours,
+                               unsigned     minutes,
+                               unsigned     seconds,
+                               Picoseconds  fractionOfSecond,
+                               Offset       offset);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', 'seconds', 'fractionOfSecond', and
+        // 'offset'.  The behavior is undefined unless 'hours', 'minutes',
+        // 'seconds', and 'fractionOfSecond' represent a valid time as
+        // specified by the 'isValidTime' function.  The resulting 'Datetime'
+        // object has the parts specified by 'TIMEFRACSECONDS' and 'OFFSET'
+        // set, and all other parts unset.
 
     Datetime();
-        // Construct a 'Datetime' object with each part initialized to
-        // an unset state.
+        // Construct a 'Datetime' object with all parts unset.
 
     Datetime(const Datetime& original);
         // Copy constructor.
@@ -240,11 +505,15 @@ class Datetime {
              unsigned hours,
              unsigned minutes,
              unsigned seconds);
-        // Create a 'Datetime' object having the (valid) value representing the
+        // Create a 'Datetime' object having the value representing the
         // specified 'year', 'month', 'day', 'hours', 'minutes', and 'seconds'
-        // parts (all parts identified by 'DATE' and 'TIME' flags).  The
-        // behavior is undefined unless 'year', 'month', 'day', 'hours',
-        // 'minutes', and 'seconds' represent a valid value (see 'isValid').
+        // parts.  The behavior is undefined unless 'year', 'month', and 'day'
+        // represent a valid date as specified by the 'isValidDate' function,
+        // and 'hours', 'minutes', and 'seconds' represent a valid time as
+        // specified by the 'isValidTime' function.  The resulting 'Datetime'
+        // object has the parts specified by 'DATE' and 'TIME' set, and the
+        // 'OFFSET' and 'FRACSECONDS' parts unset.
+        // Use of this function is discouraged; use 'createDatetime' instead.
 
     Datetime(unsigned year,
              unsigned month,
@@ -252,13 +521,16 @@ class Datetime {
              unsigned hours,
              unsigned minutes,
              unsigned seconds,
-             unsigned milliSeconds);
-        // Create a 'Datetime' object having the (valid) value representing the
+             unsigned milliseconds);
+        // Create a 'Datetime' object having the value representing the
         // specified 'year', 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'milliSeconds' parts (all parts identified by 'DATE' and 'TIMEMILLI'
-        // flags).  The behavior is undefined unless 'year', 'month', 'day',
-        // 'hours', 'minutes', 'seconds', and 'milliSeconds' represent a valid
-        // value (see 'isValid').
+        // 'milliseconds'.  The behavior is undefined unless 'year', 'month',
+        // and 'day' represent a valid date as specified by the 'isValidDate'
+        // function, and 'hours', 'minutes', 'seconds', and 'milliseconds'
+        // represent a valid time as specified by the 'isValidTime' function.
+        // The resulting 'Datetime' object has the parts specified by 'DATE'
+        // and 'TIMEFRACSECONDS' set, and the 'OFFSET' part unset.
+        // Use of this function is discouraged; use 'createDatetime' instead.
 
     Datetime(unsigned     year,
              unsigned     month,
@@ -267,13 +539,6 @@ class Datetime {
              unsigned     minutes,
              unsigned     seconds,
              Milliseconds fractionOfSecond);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'year', 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' parts (all parts identified by 'DATE' and
-        // 'TIMEFRACSECONDS' flags).  The behavior is undefined unless 'year',
-        // 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' represent a valid value (see 'isValid').
-
     Datetime(unsigned     year,
              unsigned     month,
              unsigned     day,
@@ -281,13 +546,6 @@ class Datetime {
              unsigned     minutes,
              unsigned     seconds,
              Microseconds fractionOfSecond);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'year', 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' parts (all parts identified by 'DATE' and
-        // 'TIMEFRACSECONDS' flags).  The behavior is undefined unless 'year',
-        // 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' represent a valid value (see 'isValid').
-
     Datetime(unsigned    year,
              unsigned    month,
              unsigned    day,
@@ -295,13 +553,6 @@ class Datetime {
              unsigned    minutes,
              unsigned    seconds,
              Nanoseconds fractionOfSecond);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'year', 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' parts (all parts identified by 'DATE' and
-        // 'TIMEFRACSECONDS' flags).  The behavior is undefined unless 'year',
-        // 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' represent a valid value (see 'isValid').
-
     Datetime(unsigned    year,
              unsigned    month,
              unsigned    day,
@@ -309,71 +560,70 @@ class Datetime {
              unsigned    minutes,
              unsigned    seconds,
              Picoseconds fractionOfSecond);
-        // Create a 'Datetime' object having the (valid) value representing the
+        // Create a 'Datetime' object having the value representing the
         // specified 'year', 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' parts (all parts identified by 'DATE' and
-        // 'TIMEFRACSECONDS' flags).  The behavior is undefined unless 'year',
-        // 'month', 'day', 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' represent a valid value (see 'isValid').
+        // 'fractionOfSecond'.  The behavior is undefined unless 'year',
+        // 'month', and 'day' represent a valid date as specified by the
+        // 'isValidDate' function, and 'hours', 'minutes', 'seconds', and
+        // 'fractionOfSecond' represent a valid time as specified by the
+        // 'isValidTime' function.  The resulting 'Datetime' object has the
+        // parts specified by 'DATE' and 'TIMEFRACSECONDS' set, and the
+        // 'OFFSET' part unset.
+        // Use of these functions is discouraged; use 'createDatetime' instead.
 
     Datetime(unsigned year,
              unsigned month,
              unsigned day);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'year', 'month', and 'day' parts (all parts identified by
-        // 'DATE' flags).  The behavior is undefined unless 'year', 'month',
-        // 'day', 'hours', and 'minutes' represent a valid value (see
-        // 'isValid').
+        // Create a 'Datetime' object having the value representing the
+        // specified 'year', 'month', and 'day'.  The behavior is undefined
+        // unless 'year', 'month', and 'day' represent a valid date as
+        // specified by the 'isValidDate' function.  The resulting 'Datetime'
+        // object has the parts specified by 'DATE' set, and all other parts
+        // unset.
+        // Note that constructing a 'Datetime' from three integers produces a
+        // date; to create a time from hour, minute, and second (without the
+        // fraction-of-second part unset) use the constructor taking a
+        // 'TimeTag'.
+        // Use of this function is discouraged; use 'createDate' instead.
+
 
     Datetime(unsigned hours,
              unsigned minutes,
              unsigned seconds,
-             unsigned milliSeconds);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'hours', 'minutes', 'seconds', and 'milliSeconds' parts
-        // (all parts identified by 'TIMEMILLI' flags).  The behavior is
-        // undefined unless 'hours', 'minutes', 'seconds', and 'milliSeconds'
-        // represent a valid value (see 'isValid').
+             unsigned milliseconds);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', 'seconds', and 'milliseconds'.  The
+        // behavior is undefined unless 'hours', 'minutes', 'seconds', and
+        // 'milliseconds' represent a valid time as specified by the
+        // 'isValidTime' function.  The resulting 'Datetime' object has the
+        // parts specified by 'TIMEFRACSECONDS' set, and all other parts unset.
+        // Note that removing the final argument from a call to this function
+        // results in a constructor creating a date, not a time.
 
     Datetime(unsigned     hours,
              unsigned     minutes,
              unsigned     seconds,
              Milliseconds fractionOfSecond);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'hours', 'minutes', 'seconds', and 'fractionOfSedond'
-        // parts (all parts identified by 'TIMEFRACSECONDS' flags).  The
-        // behavior is undefined unless 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' represent a valid value (see 'isValid').
-
-    Datetime(unsigned    hours,
-             unsigned    minutes,
-             unsigned    seconds,
+    Datetime(unsigned     hours,
+             unsigned     minutes,
+             unsigned     seconds,
              Microseconds fractionOfSecond);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'hours', 'minutes', 'seconds', and 'fractionOfSedond'
-        // parts (all parts identified by 'TIMEFRACSECONDS' flags).  The
-        // behavior is undefined unless 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' represent a valid value (see 'isValid').
-
-    Datetime(unsigned    hours,
-             unsigned    minutes,
-             unsigned    seconds,
-             Nanoseconds fractionOfSecond);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'hours', 'minutes', 'seconds', and 'fractionOfSedond'
-        // parts (all parts identified by 'TIMEFRACSECONDS' flags).  The
-        // behavior is undefined unless 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' represent a valid value (see 'isValid').
-
-    Datetime(unsigned    hours,
-             unsigned    minutes,
-             unsigned    seconds,
-             Picoseconds fractionOfSecond);
-        // Create a 'Datetime' object having the (valid) value representing the
-        // specified 'hours', 'minutes', 'seconds', and 'fractionOfSedond'
-        // parts (all parts identified by 'TIMEFRACSECONDS' flags).  The
-        // behavior is undefined unless 'hours', 'minutes', 'seconds', and
-        // 'fractionOfSecond' represent a valid value (see 'isValid').
+    Datetime(unsigned     hours,
+             unsigned     minutes,
+             unsigned     seconds,
+             Nanoseconds  fractionOfSecond);
+    Datetime(unsigned     hours,
+             unsigned     minutes,
+             unsigned     seconds,
+             Picoseconds  fractionOfSecond);
+        // Create a 'Datetime' object having the value representing the
+        // specified 'hours', 'minutes', 'seconds', and 'fractionOfSecond'.
+        // The behavior is undefined unless 'hours', 'minutes', 'seconds', and
+        // 'fractionOfSecond' represent a valid time as specified by the
+        // 'isValidTime' function.  The resulting 'Datetime' object has the
+        // parts specified by 'TIMEFRACSECONDS' set, and all other parts unset.
+        // Note that removing the final argument from a call to this function
+        // results in a constructor creating a date, not a time.
 
     // MANIPULATORS
 
@@ -383,122 +633,115 @@ class Datetime {
     void setDate(unsigned year,
                  unsigned month,
                  unsigned day);
-        // Set the date portions of the 'Datetime' object to the
-        // specified 'day', 'month', and 'year' respectively.
-        // The behavior is undefined unless the combined representation
-        // comprises a date for which 'isValidDate' returns true.
+        // Set the 'DATE' parts of this 'Datetime' object to the specified
+        // 'year', 'month', and 'day'.  The behavior is undefined unless
+        // 'isValidDate(year, month, day)' would return 'true'.
 
     void setTime(unsigned hours,
                  unsigned minutes,
                  unsigned seconds);
-        // Set the time of the 'Datetime' object to the specified 'hours',
-        // 'minutes', and 'seconds' respectively; the "fraction of second"
-        // part of the 'Datetime' is marked as unset.  The behavior is
-        // undefined unless the combined representation comprises a time for
-        // which 'isValidTime' with 'millisecond' set as 0 returns true.
+        // Set the 'TIME' parts of this 'Datetime' object to the specified
+        // 'hours', 'minutes', and 'seconds', and mark the 'FRACSECONDS' part
+        // of this 'Datetime' as unset.  The behavior is undefined unless
+        // 'isValidTime(hours, minutes, seconds)' would return 'true'.
 
     void setTime(unsigned hours,
                  unsigned minutes,
                  unsigned seconds,
-                 unsigned milliSeconds);
-        // Set the time of the 'Datetime' object to the specified 'hours',
-        // 'minutes', 'seconds' and 'milliSeconds' respectively.
-        // The behavior is undefined unless the combined representation
-        // comprises a time for which 'isValidTime' returns true.
+                 unsigned milliseconds);
+        // Set the 'TIMEFRACSECONDS' parts of this 'Datetime' object to the
+        // specified 'hours', 'minutes', 'seconds', and 'milliseconds'.  The
+        // behavior is undefined unless
+        // 'isValidTime(hours, minutes, seconds, milliseconds)' would return
+        // 'true'.
 
     void setTime(unsigned     hours,
                  unsigned     minutes,
                  unsigned     seconds,
                  Milliseconds fractionOfSecond);
-        // Set the time of the 'Datetime' object to the specified 'hours',
-        // 'minutes', 'seconds' and 'fractionOfSecond'.  The behavior is
-        // undefined unless the combined representation comprises a time for
-        // which 'isValidTime' returns true.
-
     void setTime(unsigned     hours,
                  unsigned     minutes,
                  unsigned     seconds,
                  Microseconds fractionOfSecond);
-        // Set the time of the 'Datetime' object to the specified 'hours',
-        // 'minutes', 'seconds' and 'fractionOfSecond'.  The behavior is
-        // undefined unless the combined representation comprises a time for
-        // which 'isValidTime' returns true.
-
     void setTime(unsigned    hours,
                  unsigned    minutes,
                  unsigned    seconds,
                  Nanoseconds fractionOfSecond);
-        // Set the time of the 'Datetime' object to the specified 'hours',
-        // 'minutes', 'seconds' and 'fractionOfSecond'.  The behavior is
-        // undefined unless the combined representation comprises a time for
-        // which 'isValidTime' returns true.
-
     void setTime(unsigned    hours,
                  unsigned    minutes,
                  unsigned    seconds,
                  Picoseconds fractionOfSecond);
-        // Set the time of the 'Datetime' object to the specified 'hours',
-        // 'minutes', 'seconds' and 'fractionOfSecond'.  The behavior is
-        // undefined unless the combined representation comprises a time for
-        // which 'isValidTime' returns true.
+        // Set the 'TIMEFRACSECONDS' parts of this 'Datetime' object to the
+        // specified 'hours', 'minutes', 'seconds', and 'fractionOfSecond'.
+        // The behavior is undefined unless
+        // 'isValidTime(hours, minutes, seconds, fractionOfSecond)' would
+        // return 'true'.
 
-    void setOffset(short value);
-        // Set the offset value of this 'Datetime' object to the specified
-        // 'value'.
-
-    void setMonth(unsigned value);
-        // Set the month value of this 'Datetime' object to the specified
-        // 'value'.
-        // The behavior is undefined unless '1 <= value <= 12'.
-
-    void setDay(unsigned value);
-        // Set the day value of this 'Datetime' object to the specified
-        // 'value'.
-        // The behavior is undefined unless '1 <= value <= 31'.
+    void setOffset(short minutesAheadOfUTC);
+        // Set the 'OFFSET' (i.e. timezone) part of this 'Datetime' object to
+        // the specified 'minutesAheadOfUTC'.
+        // The behavior is undefined unless '-840 <= minutesAheadOfUTC <= 840'.
 
     void setYear(unsigned value);
-        // Set the year value of this 'Datetime' object to the
-        // specified 'value'.
-        // The behavior is undefined unless '1 <= value <= 9999'.
+        // Set the 'YEAR' part of this 'Datetime' object to the specified
+        // 'value'.
+        // The behavior is undefined unless '1 <= value <= 9999', and either
+        // the 'MONTH' part is not set, the 'DAY' part is not set, or
+        // 'isValidDate(value. this->month(), this->day()) == true'.
+
+    void setMonth(unsigned value);
+        // Set the 'MONTH' part of this 'Datetime' object to the specified
+        // 'value'.
+        // The behavior is undefined unless '1 <= value <= 12', and either the
+        // 'DAY' part is not set, the 'YEAR' part is not set, or
+        // 'isValidDate(this->year(). value, this->day()) == true'.
+
+    void setDay(unsigned value);
+        // Set the 'DAY' part of this 'Datetime' object to the specified
+        // 'value'.
+        // The behavior is undefined unless '1 <= value <= 31', and either the
+        // 'MONTH' part is not set, the 'YEAR' part is not set, or
+        // 'isValidDate(this->year(). this->month(), value) == true'.
 
     void setHours(unsigned value);
-        // Set the hours value of this 'Datetime' object to the
-        // specified 'value'.
-        // The behavior is undefined unless '0 <= value <= 24'.
+        // Set the 'HOURS' part of this 'Datetime' object to the specified
+        // 'value'.
+        // The behavior is undefined unless '0 <= value <= 23'.
 
     void setMinutes(unsigned value);
-        // Set the minutes value of this 'Datetime' object to the
-        // specified 'value'.
+        // Set the 'MINUTES' part of this 'Datetime' object to the specified
+        // 'value'.
         // The behavior is undefined unless '0 <= value <= 59'.
 
     void setSeconds(unsigned value);
-        // Set the seconds value of this 'Datetime' object to the
-        // specified 'value'.
+        // Set the 'SECONDS' part of this 'Datetime' object to the specified
+        // 'value'.
         // The behavior is undefined unless '0 <= value <= 59'.
 
-    void setMilliseconds(unsigned value);
-        // Set the milliseconds value of this 'Datetime' object to the
-        // specified 'value'.
+    void setMilliseconds(unsigned milliseconds);
+        // Set the 'FRACSECONDS' part of this 'Datetime' object to the
+        // specified 'milliseconds'.
         // The behavior is undefined unless '0 <= value <= 999'.
 
     void setFractionOfSecond(Milliseconds value);
+        // Set the 'FRACSECONDS' part of this 'Datetime' object to the
         // Set the fraction of a second of the value of this object to the
-        // specified 'value'.  The behavior is undefined unless
+        // specified 'value'.  Note that the behavior is undefined unless
         // '0 <= value <= 999 ms'.
 
     void setFractionOfSecond(Microseconds value);
-        // Set the fraction of a second of the value of this object to the
-        // specified 'value'.  The behavior is undefined unless
+        // Set the 'FRACSECONDS' part of this 'Datetime' object to the
+        // specified 'value'. Note that the behavior is undefined unless
         // '0 <= value <= 999,999 us'.
 
     void setFractionOfSecond(Nanoseconds value);
-        // Set the fraction of a second of the value of this object to the
-        // specified 'value'.  The behavior is undefined unless
+        // Set the 'FRACSECONDS' part of this 'Datetime' object to the
+        // specified 'value'.  Note that the behavior is undefined unless
         // '0 <= value <= 999,999,999 ns'.
 
     void setFractionOfSecond(Picoseconds value);
-        // Set the fraction of a second of the value of this object to the
-        // specified 'value'.  The behavior is undefined unless
+        // Set the 'FRACSECONDS' part of this 'Datetime' object to the
+        // specified 'value'.  Note that the behavior is undefined unless
         // '0 <= value <= 999,999,999,999 ps'.
 
     blpapi_Datetime_t& rawValue();
@@ -508,71 +751,89 @@ class Datetime {
         // methods of this object, or if the fields of the 'blpapi_Datetime_t'
         // are modified such that the 'Datetime::isValid' methods of this class
         // would return 'false' when passed those fields of the struct whose
-        // bits are set in the struct's 'parts' field.
+        // bits are set in the struct's 'parts' field.  Further, direct setting
+        // of the 'FRACSECONDS' bit in the returned struct's 'parts' field will
+        // cause this 'Datetime' object to compute its fraction-of-second part
+        // not just from the struct's 'milliSeconds' field, but also from the
+        // 'picoseconds' field of the the struct returned from
+        // 'rawHighPrecisionValue()'; if neither that field nor this 'Datetime'
+        // objects' fraction-of-second part have been initialized, then
+        // the behavior of setting the 'FRACSECONDS' bit directly is undefined.
 
     blpapi_HighPrecisionDatetime_t& rawHighPrecisionValue();
         // Return a (modifiable) reference to the high-resolution C struct
-        // underlying this object.  Behavior of the object is undefined
-        // if the returned struct is modified concurrently with other non-const
+        // underlying this object.  Behavior of the object is undefined if the
+        // returned struct is modified concurrently with other non-const
         // methods of this object, or if the fields of the
         // 'blpapi_HighPrecisionDatetime_t' are modified such that the
-        // 'Datetime::isValid' methods of this class
-        // would return 'false' when passed those fields of the struct whose
-        // bits are set in the struct's 'datetime.parts' field.
+        // 'Datetime::isValid*' methods of this class would return 'false' when
+        // passed those fields of the struct whose bits are set in the struct's
+        // 'parts' field.
 
     // ACCESSORS
-    short offset() const;
-        // Return the offset value of this 'Datetime' object. The
-        // result is undefined unless object has a offset value set.
+    bool hasParts(unsigned parts) const;
+        // Return true if this 'Datetime' object has all of the specified
+        // 'parts' set.  The 'parts' parameter must be constructed by or'ing
+        // together values from the 'DatetimeParts' enum.
 
-    unsigned month() const;
-        // Return the month value of this 'Datetime' object. The
-        // result is undefined unless object has a month value set.
-
-    unsigned day() const;
-        // Return the day value of this 'Datetime' object. The result
-        // is undefined unless object has a day value set.
+    unsigned parts() const;
+        // Return a bitmask of all parts that are set in this 'Datetime'
+        // object.  This can be compared to the values in the 'DatetimeParts'
+        // enum using bitwise operations.
 
     unsigned year() const;
-        // Return the year value of this 'Datetime' object. The result
-        // is undefined unless object has a year value set.
+        // Return the year value of this 'Datetime' object.  The result is
+        // undefined unless the 'YEAR' part of this object is set.
+
+    unsigned month() const;
+        // Return the month value of this 'Datetime' object.  The result is
+        // undefined unless the 'MONTH' part of this object is set.
+
+    unsigned day() const;
+        // Return the day value of this 'Datetime' object.  The result is
+        // undefined unless the 'DAY' part of this object is set.
 
     unsigned hours() const;
-        // Return the hours value of this 'Datetime' object. The
-        // result is undefined unless object has a hours value set.
+        // Return the hours value of this 'Datetime' object.  The result is
+        // undefined unless the 'HOURS' part of this object is set.
 
     unsigned minutes() const;
-        // Return the minutes value of this 'Datetime' object. The
-        // result is undefined unless object has a minutes value set.
+        // Return the minutes value of this 'Datetime' object.  The result is
+        // undefined unless the 'MINUTES' part of this object is set.
 
     unsigned seconds() const;
-        // Return the seconds value of this 'Datetime' object. The
-        // result is undefined unless object has a seconds value set.
+        // Return the seconds value of this 'Datetime' object.  The result is
+        // undefined unless the 'SECONDS' part of this object is set.
 
     unsigned milliSeconds() const;
-        // Return the milliseconds value of this 'Datetime' object. The result
-        // is undefined unless object has a milliseconds value set. This
-        // function is deprecated; use 'milliseconds()' instead.
+        // Return the milliseconds value of this 'Datetime' object.  The result
+        // is undefined unless the 'FRACSECONDS' part of this object is set.
+        // This function is deprecated; use 'milliseconds()' instead.
 
     unsigned milliseconds() const;
         // Return the number of (whole) milliseconds in the
-        // fraction-of-a-second part of the value of this object. The result is
-        // undefined unless object has a milliseconds value set.
+        // fraction-of-a-second part of the value of this object.  The result
+        // is undefined unless the 'FRACSECONDS' part of this object is set.
 
     unsigned microseconds() const;
         // Return the number of (whole) microseconds in the
-        // fraction-of-a-second part of the value of this object. The result is
-        // undefined unless object has a fraction-of-a-second value set.
+        // fraction-of-a-second part of the value of this object.  The result
+        // is undefined unless the 'FRACSECONDS' part of this object is set.
 
     unsigned nanoseconds() const;
         // Return the number of (whole) nanoseconds in the fraction-of-a-second
-        // part of the value of this object. The result is undefined unless
-        // object has a fraction-of-a-second value set.
+        // part of the value of this object.  The result is undefined unless
+        // the 'FRACSECONDS' part of this object is set.
 
     unsigned long long picoseconds() const;
         // Return the number of (whole) picoseconds in the fraction-of-a-second
-        // part of the value of this object. The result is undefined unless
-        // object has a fraction-of-a-second value set.
+        // part of the value of this object.  The result is undefined unless
+        // the 'FRACSECONDS' part of this object is set.
+
+    short offset() const;
+        // Return the number of minutes this 'Datetime' object is ahead of UTC.
+        // The result is undefined unless the 'OFFSET' part of this object is
+        // set.
 
     const blpapi_Datetime_t& rawValue() const;
         // Return a (read-only) reference to the millisecond-resolution C
@@ -582,22 +843,15 @@ class Datetime {
         // Return a (read-only) reference to the high-precision C struct
         // underlying this object.
 
-    bool hasParts(unsigned parts) const;
-        // Return true if this 'Datetime' object has all of the
-        // specified 'parts' set. The 'parts' parameter must be
-        // constructed by or'ing together values from the
-        // DateTimeParts enum.
-
-    unsigned parts() const;
-        // Return a bitmask of all parts that are set in this
-        // 'Datetime' object. This can be compared to the values in
-        // the DatetimeParts enum using bitwise operations.
-
     bool isValid() const;
-        // Check whether the value of this 'Datetime' is valid. The behaviour
+        // Check whether the value of this 'Datetime' is valid.  The behaviour
         // is undefined unless this object represents a date (has YEAR, MONTH
         // and DAY part set) or time (has HOURS, MINUTES, SECONDS and
-        // MILLISECONDS part set).
+        // MILLISECONDS part set).  Note that in almost all cases where this
+        // function returns 'false', prior member function calls have had
+        // undefined behavior.
+        // This function is deprecated; use 'isValidDate' and/or 'isValidTime'
+        // directly instead.
 
     std::ostream& print(std::ostream& stream,
                         int           level = 0,
@@ -620,37 +874,26 @@ class Datetime {
 
 // FREE OPERATORS
 bool operator==(const Datetime& lhs, const Datetime& rhs);
-    // Return 'true' if the specified 'lhs' and 'rhs' Datetimes have the same
-    // value, and 'false' otherwise.  Two Datetimes have the same value if they
-    // have the same respective 'parts()' and the same value for the fields
-    // for which the parts have been set.
+    // Return 'true' if the specified 'lhs' and 'rhs' have the same value, and
+    // 'false' otherwise.  Two 'Datetime' objects have the same value if they
+    // have the same parts set, and the same values for each of those parts.
 
 bool operator!=(const Datetime& lhs, const Datetime& rhs);
-    // Return 'true' if the specified 'lhs' and 'rhs' Datetimes do not have the
-    // same value, and 'false' otherwise.  Two Datetimes do not have the same
-    // value if they do not have the same 'parts()' and they do not have the
-    // same values for any of fields for which the parts have been set.
+    // Return 'true' if the specified 'lhs' and 'rhs' do not have the same
+    // value, and 'false' otherwise.  Two 'Datetime' objects have the same
+    // value if they have the same parts set, and the same values for each of
+    // those parts.
 
 bool operator<(const Datetime& lhs, const Datetime& rhs);
-    // Return 'true' if the specified 'lhs' Datetime value is less than the
-    // specified 'rhs' Datetime value, and 'false' otherwise.  The ordering is
-    // unspecified if 'lhs.parts() != rhs.parts()'.
-
 bool operator<=(const Datetime& lhs, const Datetime& rhs);
-    // Return 'true' if the specified 'lhs' Datetime value is less than or
-    // equal to the specified 'rhs' Datetime value, and 'false' otherwise.  The
-    // ordering is unspecified if 'lhs.parts() != rhs.parts()'.
-
 bool operator>(const Datetime& lhs, const Datetime& rhs);
-    // Return 'true' if the specified 'lhs' Datetime value is greater than the
-    // specified 'rhs' Datetime value, and 'false' otherwise.  The ordering is
-    // unspecified if 'lhs.parts() != rhs.parts()'.
-
 bool operator>=(const Datetime& lhs, const Datetime& rhs);
-    // Return 'true' if the specified 'lhs' Datetime value is greater than or
-    // equal to the specified 'rhs' Datetime value, and 'false' otherwise.  The
-    // ordering is unspecified if 'lhs.parts() != rhs.parts()'.
-
+    // Compare the specified 'lhs' and 'rhs'.  The ordering used is temporal,
+    // with earlier moments comparing less than later moments, in the case that
+    // 'lhs.parts() == rhs.parts()' and 'parts()' is one of 'DATE', 'TIME',
+    // 'TIMEFRACSECONDS', 'DATE | TIME', and 'DATE | TIMEFRACSECONDS'; the
+    // ordering in all other cases is unspecified, but guaranteed stable within
+    // process.
 
 std::ostream& operator<<(std::ostream& stream, const Datetime& datetime);
     // Write the value of the specified 'datetime' object to the specified
@@ -669,6 +912,22 @@ std::ostream& operator<<(std::ostream& stream, const Datetime& datetime);
                             // --------------
                             // class Datetime
                             // --------------
+
+inline
+bool Datetime::isLeapYear(int y)
+{
+    return 0 == y % 4 && (y <= 1752 || 0 != y % 100 || 0 == y % 400);
+}
+
+inline
+Datetime::Datetime(unsigned hours,
+                   unsigned minutes,
+                   unsigned seconds,
+                   TimeTag)
+{
+    std::memset(&d_value, 0, sizeof(d_value));
+    setTime(hours, minutes, seconds);
+}
 
 inline
 Datetime::Milliseconds::Milliseconds(int milliseconds)
@@ -693,6 +952,433 @@ Datetime::Picoseconds::Picoseconds(long long picoseconds)
 : d_psec(picoseconds)
 {
 }
+
+inline
+Datetime::Offset::Offset(short minutesAheadOfUTC)
+: d_minutesAheadOfUTC(minutesAheadOfUTC)
+{
+}
+
+inline
+bool Datetime::isValidDate(int year,
+                           int month,
+                           int day)
+{
+    if ((year <= 0) || (year > 9999) ||
+        (month <= 0) || (month > 12) ||
+        (day <= 0) || (day > 31) ) {
+        return false;
+    }
+    if (day < 29) {
+        return true;
+    }
+    if (year == 1752) {
+        if (month == 9 && day > 2 && day < 14) {
+            return false;
+        }
+    }
+    switch (month) {
+      case 1:
+      case 3:
+      case 5:
+      case 7:
+      case 8:
+      case 10:
+      case 12:
+        return true;
+
+      case 4:
+      case 6:
+      case 9:
+      case 11: {
+        if (day > 30) {
+            return false;
+        }
+        else {
+            return true;
+        }
+      }
+      case 2: {
+        if (isLeapYear(year)) {
+            if (day > 29) {
+                return false;
+            }
+            else {
+                return true;
+            }
+        }
+        else if (day > 28) {
+            return false;
+        }
+        else {
+            return true;
+        }
+      }
+      default: {
+        return true;
+      }
+    }
+}
+
+inline
+bool Datetime::isValidTime(int hours,
+                           int minutes,
+                           int seconds) {
+    return (hours >= 0) && (hours < 24)
+        && (minutes >= 0) && (minutes < 60)
+        && (seconds >= 0) && (seconds < 60);
+}
+
+inline
+bool Datetime::isValidTime(int hours,
+                           int minutes,
+                           int seconds,
+                           int milliSeconds)
+{
+    return (hours >= 0) && (hours < 24)
+        && (minutes >= 0) && (minutes < 60)
+        && (seconds >= 0) && (seconds < 60)
+        && (milliSeconds >= 0) && (milliSeconds < 1000);
+}
+
+inline
+bool Datetime::isValidTime(int          hours,
+                           int          minutes,
+                           int          seconds,
+                           Milliseconds fractionOfSecond)
+{
+    return isValidTime(hours, minutes, seconds, fractionOfSecond.d_msec);
+}
+
+inline
+bool Datetime::isValidTime(int          hours,
+                           int          minutes,
+                           int          seconds,
+                           Microseconds fractionOfSecond)
+{
+    return (hours >= 0) && (hours < 24)
+        && (minutes >= 0) && (minutes < 60)
+        && (seconds >= 0) && (seconds < 60)
+        && (fractionOfSecond.d_usec >= 0)
+        && (fractionOfSecond.d_usec < 1000 * 1000);
+}
+
+inline
+bool Datetime::isValidTime(int         hours,
+                           int         minutes,
+                           int         seconds,
+                           Nanoseconds fractionOfSecond)
+{
+    return (hours >= 0) && (hours < 24)
+        && (minutes >= 0) && (minutes < 60)
+        && (seconds >= 0) && (seconds < 60)
+        && (fractionOfSecond.d_nsec >= 0)
+        && (fractionOfSecond.d_nsec < 1000 * 1000 * 1000);
+}
+
+inline
+bool Datetime::isValidTime(int         hours,
+                           int         minutes,
+                           int         seconds,
+                           Picoseconds fractionOfSecond)
+{
+    return (hours >= 0) && (hours < 24)
+        && (minutes >= 0) && (minutes < 60)
+        && (seconds >= 0) && (seconds < 60)
+        && (fractionOfSecond.d_psec >= 0)
+        && (fractionOfSecond.d_psec < 1000LL * 1000 * 1000 * 1000);
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned year,
+                                  unsigned month,
+                                  unsigned day,
+                                  unsigned hours,
+                                  unsigned minutes,
+                                  unsigned seconds)
+{
+    return Datetime(year, month, day, hours, minutes, seconds);
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned year,
+                                  unsigned month,
+                                  unsigned day,
+                                  unsigned hours,
+                                  unsigned minutes,
+                                  unsigned seconds,
+                                  Offset   offset)
+{
+    Datetime dt(year, month, day, hours, minutes, seconds);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned     year,
+                                  unsigned     month,
+                                  unsigned     day,
+                                  unsigned     hours,
+                                  unsigned     minutes,
+                                  unsigned     seconds,
+                                  Milliseconds fractionOfSecond)
+{
+    return Datetime(year,
+                    month,
+                    day,
+                    hours,
+                    minutes,
+                    seconds,
+                    fractionOfSecond);
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned     year,
+                                  unsigned     month,
+                                  unsigned     day,
+                                  unsigned     hours,
+                                  unsigned     minutes,
+                                  unsigned     seconds,
+                                  Microseconds fractionOfSecond)
+{
+    return Datetime(year,
+                    month,
+                    day,
+                    hours,
+                    minutes,
+                    seconds,
+                    fractionOfSecond);
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned    year,
+                                  unsigned    month,
+                                  unsigned    day,
+                                  unsigned    hours,
+                                  unsigned    minutes,
+                                  unsigned    seconds,
+                                  Nanoseconds fractionOfSecond)
+{
+    return Datetime(year,
+                    month,
+                    day,
+                    hours,
+                    minutes,
+                    seconds,
+                    fractionOfSecond);
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned    year,
+                                  unsigned    month,
+                                  unsigned    day,
+                                  unsigned    hours,
+                                  unsigned    minutes,
+                                  unsigned    seconds,
+                                  Picoseconds fractionOfSecond)
+{
+    return Datetime(year,
+                    month,
+                    day,
+                    hours,
+                    minutes,
+                    seconds,
+                    fractionOfSecond);
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned     year,
+                                  unsigned     month,
+                                  unsigned     day,
+                                  unsigned     hours,
+                                  unsigned     minutes,
+                                  unsigned     seconds,
+                                  Milliseconds fractionOfSecond,
+                                  Offset       offset)
+{
+    Datetime dt(year, month, day, hours, minutes, seconds, fractionOfSecond);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned     year,
+                                  unsigned     month,
+                                  unsigned     day,
+                                  unsigned     hours,
+                                  unsigned     minutes,
+                                  unsigned     seconds,
+                                  Microseconds fractionOfSecond,
+                                  Offset       offset)
+{
+    Datetime dt(year, month, day, hours, minutes, seconds, fractionOfSecond);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned     year,
+                                  unsigned     month,
+                                  unsigned     day,
+                                  unsigned     hours,
+                                  unsigned     minutes,
+                                  unsigned     seconds,
+                                  Nanoseconds  fractionOfSecond,
+                                  Offset       offset)
+{
+    Datetime dt(year, month, day, hours, minutes, seconds, fractionOfSecond);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createDatetime(unsigned     year,
+                                  unsigned     month,
+                                  unsigned     day,
+                                  unsigned     hours,
+                                  unsigned     minutes,
+                                  unsigned     seconds,
+                                  Picoseconds  fractionOfSecond,
+                                  Offset       offset)
+{
+    Datetime dt(year, month, day, hours, minutes, seconds, fractionOfSecond);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createDate(unsigned year,
+                              unsigned month,
+                              unsigned day)
+{
+    return Datetime(year, month, day);
+}
+
+inline
+Datetime Datetime::createTime(unsigned hours,
+                              unsigned minutes,
+                              unsigned seconds)
+{
+    return Datetime(hours, minutes, seconds, TimeTag());
+}
+
+inline
+Datetime Datetime::createTime(unsigned hours,
+                              unsigned minutes,
+                              unsigned seconds,
+                              Offset   offset)
+{
+    Datetime dt(hours, minutes, seconds, TimeTag());
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createTime(unsigned hours,
+                              unsigned minutes,
+                              unsigned seconds,
+                              unsigned milliseconds)
+{
+    return Datetime(hours, minutes, seconds, milliseconds);
+}
+
+inline
+
+Datetime Datetime::createTime(unsigned hours,
+                              unsigned minutes,
+                              unsigned seconds,
+                              unsigned milliseconds,
+                              Offset   offset)
+{
+    Datetime dt(hours, minutes, seconds, milliseconds);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createTime(unsigned     hours,
+                              unsigned     minutes,
+                              unsigned     seconds,
+                              Milliseconds fractionOfSecond)
+{
+    return Datetime(hours, minutes, seconds, fractionOfSecond);
+}
+
+inline
+Datetime Datetime::createTime(unsigned     hours,
+                              unsigned     minutes,
+                              unsigned     seconds,
+                              Microseconds fractionOfSecond)
+{
+    return Datetime(hours, minutes, seconds, fractionOfSecond);
+}
+
+inline
+Datetime Datetime::createTime(unsigned     hours,
+                              unsigned     minutes,
+                              unsigned     seconds,
+                              Nanoseconds  fractionOfSecond)
+{
+    return Datetime(hours, minutes, seconds, fractionOfSecond);
+}
+
+inline
+Datetime Datetime::createTime(unsigned     hours,
+                              unsigned     minutes,
+                              unsigned     seconds,
+                              Picoseconds  fractionOfSecond)
+{
+    return Datetime(hours, minutes, seconds, fractionOfSecond);
+}
+
+inline
+Datetime Datetime::createTime(unsigned     hours,
+                              unsigned     minutes,
+                              unsigned     seconds,
+                              Milliseconds fractionOfSecond,
+                              Offset       offset)
+{
+    Datetime dt(hours, minutes, seconds, fractionOfSecond);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createTime(unsigned     hours,
+                              unsigned     minutes,
+                              unsigned     seconds,
+                              Microseconds fractionOfSecond,
+                              Offset       offset)
+{
+    Datetime dt(hours, minutes, seconds, fractionOfSecond);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createTime(unsigned     hours,
+                              unsigned     minutes,
+                              unsigned     seconds,
+                              Nanoseconds  fractionOfSecond,
+                              Offset       offset)
+{
+    Datetime dt(hours, minutes, seconds, fractionOfSecond);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
+inline
+Datetime Datetime::createTime(unsigned     hours,
+                              unsigned     minutes,
+                              unsigned     seconds,
+                              Picoseconds  fractionOfSecond,
+                              Offset       offset)
+{
+    Datetime dt(hours, minutes, seconds, fractionOfSecond);
+    dt.setOffset(offset.d_minutesAheadOfUTC);
+    return dt;
+}
+
 
 inline
 Datetime::Datetime()
@@ -1032,6 +1718,14 @@ void Datetime::setOffset(short value)
 
 
 inline
+void Datetime::setYear(unsigned value)
+{
+    d_value.datetime.year   = value;
+    d_value.datetime.parts |= DatetimeParts::YEAR;
+}
+
+
+inline
 void Datetime::setMonth(unsigned value)
 {
     d_value.datetime.month  = value;
@@ -1044,13 +1738,6 @@ void Datetime::setDay(unsigned value)
 {
     d_value.datetime.day    = value;
     d_value.datetime.parts |= DatetimeParts::DAY;
-}
-
-inline
-void Datetime::setYear(unsigned value)
-{
-    d_value.datetime.year   = value;
-    d_value.datetime.parts |= DatetimeParts::YEAR;
 }
 
 
@@ -1132,9 +1819,21 @@ blpapi_HighPrecisionDatetime_t& Datetime::rawHighPrecisionValue()
 }
 
 inline
-short Datetime::offset() const
+bool Datetime::hasParts(unsigned parts) const
 {
-    return d_value.datetime.offset;
+    return parts == (d_value.datetime.parts & parts);
+}
+
+inline
+unsigned Datetime::parts() const
+{
+    return d_value.datetime.parts;
+}
+
+inline
+unsigned Datetime::year() const
+{
+    return d_value.datetime.year;
 }
 
 inline
@@ -1147,12 +1846,6 @@ inline
 unsigned Datetime::day() const
 {
     return d_value.datetime.day;
-}
-
-inline
-unsigned Datetime::year() const
-{
-    return d_value.datetime.year;
 }
 
 inline
@@ -1207,6 +1900,12 @@ unsigned long long Datetime::picoseconds() const
 }
 
 inline
+short Datetime::offset() const
+{
+    return d_value.datetime.offset;
+}
+
+inline
 const blpapi_Datetime_t& Datetime::rawValue() const
 {
     return d_value.datetime;
@@ -1216,18 +1915,6 @@ inline
 const blpapi_HighPrecisionDatetime_t& Datetime::rawHighPrecisionValue() const
 {
     return d_value;
-}
-
-inline
-unsigned Datetime::parts() const
-{
-    return d_value.datetime.parts;
-}
-
-inline
-bool Datetime::hasParts(unsigned parts) const
-{
-    return parts == (d_value.datetime.parts & parts);
 }
 
 inline
@@ -1251,137 +1938,6 @@ bool Datetime::isValid() const
         return false;
     }
     return true;
-}
-
-inline
-bool Datetime::isLeapYear(int y)
-{
-    return 0 == y % 4 && (y <= 1752 || 0 != y % 100 || 0 == y % 400);
-}
-
-inline
-bool Datetime::isValidDate(int year,
-                           int month,
-                           int day)
-{
-    if ((year <= 0) || (year > 9999) ||
-        (month <= 0) || (month > 12) ||
-        (day <= 0) || (day > 31) ) {
-        return false;
-    }
-    if (day < 29) {
-        return true;
-    }
-    if (year == 1752) {
-        if (month == 9 && day > 2 && day < 14) {
-            return false;
-        }
-    }
-    switch (month) {
-      case 1:
-      case 3:
-      case 5:
-      case 7:
-      case 8:
-      case 10:
-      case 12:
-        return true;
-
-      case 4:
-      case 6:
-      case 9:
-      case 11: {
-        if (day > 30) {
-            return false;
-        }
-        else {
-            return true;
-        }
-      }
-      case 2: {
-        if (isLeapYear(year)) {
-            if (day > 29) {
-                return false;
-            }
-            else {
-                return true;
-            }
-        }
-        else if (day > 28) {
-            return false;
-        }
-        else {
-            return true;
-        }
-      }
-      default: {
-        return true;
-      }
-    }
-}
-
-inline
-bool Datetime::isValidTime(int hours,
-                           int minutes,
-                           int seconds,
-                           int milliSeconds)
-{
-    if (hours == 24) {
-        if ((minutes != 0) || (seconds !=0) || (milliSeconds != 0)) {
-            return false;
-        }
-        else {
-            return true;
-        }
-    }
-    else {
-        return (hours >= 0) && (hours < 24) &&
-            (minutes >= 0) && (minutes < 60) &&
-            (seconds >= 0) && (seconds < 60) &&
-            (milliSeconds >= 0) && (milliSeconds < 1000);
-    }
-}
-
-inline
-bool Datetime::isValidTime(int          hours,
-                           int          minutes,
-                           int          seconds,
-                           Milliseconds fractionOfSecond)
-{
-    return isValidTime(hours, minutes, seconds, fractionOfSecond.d_msec);
-}
-
-inline
-bool Datetime::isValidTime(int          hours,
-                           int          minutes,
-                           int          seconds,
-                           Microseconds fractionOfSecond)
-{
-    return (   isValidTime(hours, minutes, seconds, 0)
-            && fractionOfSecond.d_usec >= 0
-            && fractionOfSecond.d_usec < 1000 * 1000);
-}
-
-inline
-bool Datetime::isValidTime(int         hours,
-                           int         minutes,
-                           int         seconds,
-                           Nanoseconds fractionOfSecond)
-{
-    return (   isValidTime(hours, minutes, seconds, 0)
-            && fractionOfSecond.d_nsec >= 0
-            && fractionOfSecond.d_nsec < 1000 * 1000 * 1000);
-}
-
-inline
-bool Datetime::isValidTime(int         hours,
-                           int         minutes,
-                           int         seconds,
-                           Picoseconds fractionOfSecond)
-{
-    return (   isValidTime(hours, minutes, seconds, 0)
-           && fractionOfSecond.d_psec >= 0LL
-           && fractionOfSecond.d_psec < 1000LL * 1000 * 1000 * 1000);
 }
 
 inline

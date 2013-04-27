@@ -21,13 +21,14 @@
 #ifndef INCLUDED_BLPAPI_NAME
 #define INCLUDED_BLPAPI_NAME
 
-//@PURPOSE: Provide a representation of a string for efficient comparison.
+//@PURPOSE: Provide a representation of strings for use as container keys.
 //
 //@CLASSES:
-// blpapi::Name: Represents a string in a form for efficient string comparison
+// blpapi::Name: constant string in an efficient form for use as container keys
 //
 //@DESCRIPTION: This component implements a representation of a string which is
-// efficient for string comparison.
+// efficient for use as a key in a container (constant-time hashing and
+// ordering operations using the standard "intern string" technique).
 
 #ifndef INCLUDED_BLPAPI_TYPES
 #include <blpapi_types.h>
@@ -95,137 +96,191 @@ blpapi_Name_t* blpapi_Name_findName(
 
 namespace BloombergLP {
 namespace blpapi {
-                         // ==========
-                         // class Name
-                         // ==========
+                                 // ==========
+                                 // class Name
+                                 // ==========
 
 class Name {
-    // Name represents a string in a form which is efficient for
-    // comparison.
+    // 'Name' represents a string in a form which is efficient for hashing and
+    // comparison, thus providing efficient lookup when used as a key in either
+    // ordered or hash-based containers.
     //
-    // Name objects are used to identify and access the classes which
-    // define the schema - SchemaTypeDefinition,
-    // SchemaElementDefinition, SchemaConstant,
-    // SchemaConstantList. They are also used to access the values in
-    // Element objects and Message objects.
+    // 'Name' objects are used to identify and access the classes which define
+    // a schema - 'SchemaTypeDefinition', 'SchemaElementDefinition',
+    // 'Constant', and 'ConstantList'.  They are also used to access the values
+    // in 'Element' objects and 'Message' objects.
     //
-    // The Name class is an efficient substitute for a string when
-    // used as a key, providing constant time comparison and ordering
-    // operations. Two Name objects constructed from strings for which
-    // strcmp() would return 0 will always compare equally.
+    // The 'Name' class is an efficient substitute for a string when used as a
+    // key, providing constant-time hashing and comparision.  Two 'Name'
+    // objects constructed from strings for which 'strcmp()' would return 0
+    // will always compare equal.
     //
-    // The ordering of Name objects (as defined by the operator<
-    // defined for Name) is consistent during a particular instance of
-    // a single application. However, the ordering is not lexical and
-    // is not consistent with the ordering of the same Name objects in
-    // any other process.
+    // The ordering of 'Name' objects (as defined by 'operator<(Name,Name)') is
+    // consistent during a particular instance of a single application.
+    // However, the ordering is not lexical and is not necessarily consistent
+    // with the ordering of the same 'Name' objects in any other process.
     //
-    // Where possible Name objects should be initialized once and then
-    // reused. Creating a Name object from a char const* involves a
-    // search in a container requiring multiple string comparison
-    // operations.
+    // Where possible, 'Name' objects should be initialized once and then
+    // reused.  Creating a 'Name' object from a 'const char*' involves a search
+    // in a container requiring multiple string comparison operations.
     //
-    // Note: Each Name instance refers to an entry in a global static
-    // table. Name instances for identical strings will refer to the
-    // same data. There is no provision for removing entries from the
-    // static table so Name objects should only be used when the set
-    // of input strings is bounded.
+    // Note: Each 'Name' instance refers to an entry in a global static table.
+    // 'Name' instances for identical strings will refer to the same data.
+    // There is no provision for removing entries from the static table so
+    // 'Name' objects should be used only when the set of input strings is
+    // bounded.
     //
-    // For example, creating a Name for every possible field name and
-    // type in a data model is reasonable (in fact, the API will do
-    // this whenever it receives schema information). However
-    // converting sequence numbers on incoming messages to strings and
-    // creating a Name from each one of those strings will cause the
-    // static table to grow in an unbounded manner.
+    // For example, creating a 'Name' for every possible field name and type in
+    // a data model is reasonable (in fact, the API will do this whenever it
+    // receives schema information).  Converting sequence numbers from incoming
+    // messages to strings and creating a 'Name' from each one of those
+    // strings, however, will cause the static table to grow in an unbounded
+    // manner, and is tantamount to a memory leak.
 
     blpapi_Name_t *d_impl_p;
 
   public:
     // CLASS METHODS
 
-    static Name findName(const char* nameString);
-        // If a Name already exists which matches the specified
-        // 'nameString' it is returned. Otherwise a Name which will
-        // compare equal to a Name created using the default
-        // constructor is returned. The behavior is undefined if
-        // 'nameString' does not point to a NUL-terminated string.
+    static Name findName(const char *nameString);
+        // If a 'Name' already exists which matches the specified
+        // 'nameString', then return a copy of that 'Name'; otherwise return a
+        // 'Name' which will compare equal to a 'Name' created using the
+        // default constructor. The behavior is undefined if 'nameString' does
+        // not point to a null-terminated string.
 
-    static bool hasName(const char* nameString);
-        // Returns true if a Name has been created which matches the
-        // specified 'nameString' otherwise returns false. The
-        // behavior is undefined if 'nameString' does not point to a
-        // NUL-terminated string.
+    static bool hasName(const char *nameString);
+        // Return 'true' if a 'Name' has been created which matches the
+        // specified 'nameString'; otherwise return 'false'. The behavior is
+        // undefined if 'nameString' does not point to a null-terminated
+        // string.
 
     Name();
-        // Construct an uninitialized Name. An uninitialized Name can
-        // be assigned to, destroyed or tested for equality. The
-        // behavior for all other operations is undefined.
+        // Construct an uninitialized 'Name'. An uninitialized 'Name' can be
+        // assigned to, destroyed, or tested for equality. The behavior for all
+        // other operations is undefined.
 
     Name(blpapi_Name_t *handle);
 
     Name(const Name& original);
-        // Copy constructor.
+        // Create a 'Name' object having the same value as the specified
+        // 'original'.
 
     explicit Name(const char* nameString);
-        // Construct a Name from the specified 'nameString' as long as
-        // 'nameString' points to a valid NUL-terminated string. Any
-        // null-terminated string can be specified (including an empty
-        // string).
-        //
-        // Constructing a Name from a char const* is a relatively
-        // expensive operation. If a Name will be used repeatedly it
-        // is preferable to create it once and re-use the object.
+        // Construct a 'Name' from the specified 'nameString'. The behavior is
+        // undefined unless 'nameString' is a null-terminated string. Note that
+        // any null-terminated string can be specified, including an empty
+        // string. Note also that constructing a 'Name' from a 'const char *'
+        // is a relatively expensive operation. If a 'Name' will be used
+        // repeatedly it is preferable to create it once and re-use (or copy)
+        // the object.
 
     ~Name();
-        // Destructor.
+        // Destroy this object.
 
     // MANIPULATORS
 
     Name& operator=(const Name& rhs);
-        // Assignment operator.
+        // Assign to this object the value of the specified 'rhs', and return a
+        // reference to this modifiable object.
 
     // ACCESSORS
 
     const char *string() const;
-        // Returns a pointer to the Name as a C style, null-terminated
-        // string. The pointer returned will be valid at least until
-        // main() exits.
+        // Return a pointer to the null-terminated string value of this 'Name'.
+        // The pointer returned will be valid at least until main() exits.
 
     size_t length() const;
-        // Returns the length of the Names string representation
-        // (excluding a terminating null). Using name.length() is more
-        // efficient than using strlen(name.string()) but the result is
-        // the same.
+        // Return the length of the string value of this 'Name',
+        // (excluding a terminating null). Note that 'name.length()' is
+        // logically equivalent to 'strlen(name.string())', however the former
+        // is potentially more efficient.
+
+    size_t hash() const;
+        // Return an integral value such that for two 'Name' objects 'a' and
+        // 'b', if 'a == b' then 'a.hash() == b.hash()', and if 'a != b' then
+        // it is unlikely that 'a.hash() == b.hash()'.
 
     blpapi_Name_t* impl() const;
 };
 
 // FREE OPERATORS
-inline
 bool operator==(const Name& lhs, const Name& rhs);
     // Return true if the specified 'lhs' and 'rhs' name objects have
-    // the same value, and false otherwise.  Two 'Name' objects have
-    // the same value if and only if the strings supplied when they
-    // were created would return 0 when compared using strcmp().
+    // the same value, and false otherwise. Two 'Name' objects 'a' and 'b' have
+    // the same value if and only if 'strcmp(a.string(), b.string()) == 0'.
 
-inline
 bool operator!=(const Name& lhs, const Name& rhs);
-    // Equivalent to !(lhs==rhs).
+    // Return false if the specified 'lhs' and 'rhs' name objects have the same
+    // value, and true otherwise. Two 'Name' objects 'a' and 'b' have the same
+    // value if and only if 'strcmp(a.string(), b.string()) == 0'.  Note that
+    // 'lhs != rhs' is equivalent to '!(lhs==rhs)'.
 
-inline
-bool operator==(const Name& lhs, const char* rhs);
-    // Return true if the specified 'lhs' and 'rhs' name objects have the
-    // same value, and false otherwise.  Two 'Name' objects have the same value
-    // if and only if the strings supplied when they were created would return
-    // 0 when compared with strcmp().
+bool operator==(const Name& lhs, const char *rhs);
+    // Return true if the specified 'lhs' and 'rhs' have the same value, and
+    // false otherwise. A 'Name' object 'a' and a null-terminated string 'b'
+    // have the same value if and only if 'strcmp(a.string(), b) == 0'. The
+    // behavior is undefined unless 'rhs' is a null-terminated string.
 
-inline
+bool operator!=(const Name& lhs, const char *rhs);
+    // Return false if the specified 'lhs' and 'rhs' have the same value, and
+    // true otherwise. A 'Name' object 'a' and a null-terminated string 'b'
+    // have the same value if and only if 'strcmp(a.string(), b) == 0'. The
+    // behavior is undefined unless 'rhs' is a null-terminated string.
+
+bool operator==(const char *lhs, const Name& rhs);
+    // Return true if the specified 'lhs' and 'rhs' have the same value, and
+    // false otherwise. A 'Name' object 'a' and a null-terminated string 'b'
+    // have the same value if and only if 'strcmp(a.string(), b) == 0'. The
+    // behavior is undefined unless 'lhs' is a null-terminated string.
+
+bool operator!=(const char *lhs, const Name& rhs);
+    // Return false if the specified 'lhs' and 'rhs' have the same value, and
+    // true otherwise. A 'Name' object 'a' and a null-terminated string 'b'
+    // have the same value if and only if 'strcmp(a.string(), b) == 0'. The
+    // behavior is undefined unless 'lhs' is a null-terminated string.
+
 bool operator<(const Name& lhs, const Name& rhs);
-    // This operator defines a sort ordering amongst Name objects. The
-    // sort ordering is stable within the lifetime of a single process
-    // but is not lexical and is also not guaranteed to be consistent
-    // across different processes (including repeated runs of the same
-    // process).
+    // Return 'true' if the specified 'lhs' is ordered before the specified
+    // 'rhs', and 'false' otherwise. The ordering used is stable within the
+    // lifetime of a single process and is compatible with
+    // 'operator==(const Name&, const Name&)', however this order is neither
+    // guaranteed to be consistent across different processes (including
+    // repeated runs of the same process), nor guaranteed to be lexical (i.e.
+    // compatible with 'strcmp').
+
+bool operator<=(const Name& lhs, const Name& rhs);
+    // Return 'false' if the specified 'rhs' is ordered before the specified
+    // 'lhs', and 'true' otherwise. The ordering used is stable within the
+    // lifetime of a single process and is compatible with
+    // 'operator==(const Name&, const Name&)', however this order is neither
+    // guaranteed to be consistent across different processes (including
+    // repeated runs of the same process), nor guaranteed to be lexical (i.e.
+    // compatible with 'strcmp').
+
+bool operator>(const Name& lhs, const Name& rhs);
+    // Return 'true' if the specified 'rhs' is ordered before the specified
+    // 'lhs', and 'false' otherwise. The ordering used is stable within the
+    // lifetime of a single process and is compatible with
+    // 'operator==(const Name&, const Name&)', however this order is neither
+    // guaranteed to be consistent across different processes (including
+    // repeated runs of the same process), nor guaranteed to be lexical (i.e.
+    // compatible with 'strcmp').
+
+bool operator>=(const Name& lhs, const Name& rhs);
+    // Return 'false' if the specified 'lhs' is ordered before the specified
+    // 'rhs', and 'true' otherwise. The ordering used is stable within the
+    // lifetime of a single process and is compatible with
+    // 'operator==(const Name&, const Name&)', however this order is neither
+    // guaranteed to be consistent across different processes (including
+    // repeated runs of the same process), nor guaranteed to be lexical (i.e.
+    // compatible with 'strcmp').
+
+std::ostream& operator<<(std::ostream& stream, const Name& name);
+    // Write the value of the specified 'name' object to the specified output
+    // 'stream', and return a reference to 'stream'.  Note that this
+    // human-readable format is not fully specified and can change without
+    // notice.
 
 //=============================================================================
 //                           INLINE FUNCTION DEFINITIONS
@@ -254,7 +309,7 @@ Name::Name(const Name& original)
 }
 
 inline
-Name::Name(const char* nameString)
+Name::Name(const char *nameString)
 {
     d_impl_p = blpapi_Name_create(nameString);
 }
@@ -278,7 +333,7 @@ Name& Name::operator=(const Name& rhs)
 }
 
 inline
-const char* Name::string() const
+const char *Name::string() const
 {
     return blpapi_Name_string(d_impl_p);
 }
@@ -290,57 +345,97 @@ size_t Name::length() const
 }
 
 inline
-blpapi_Name_t* Name::impl() const
+blpapi_Name_t *Name::impl() const
 {
     return d_impl_p;
 }
 
 inline
-Name Name::findName(const char* nameString)
+Name Name::findName(const char *nameString)
 {
     return Name(blpapi_Name_findName(nameString));
 }
 
 inline
-bool Name::hasName(const char* nameString)
+bool Name::hasName(const char *nameString)
 {
     return blpapi_Name_findName(nameString) ? true : false;
 }
 
 inline
-bool operator==(const Name& lhs, const Name& rhs)
+size_t Name::hash() const
+{
+    return reinterpret_cast<size_t>(impl());
+}
+
+}  // close namespace blpapi
+
+inline
+bool blpapi::operator==(const Name& lhs, const Name& rhs)
 {
     return (lhs.impl() == rhs.impl());
 }
 
 inline
-bool operator==(const Name& lhs, const char* rhs)
-{
-    return blpapi_Name_equalsStr(lhs.impl(), rhs) != 0;
-}
-
-inline
-bool operator!=(const Name& lhs, const Name& rhs)
+bool blpapi::operator!=(const Name& lhs, const Name& rhs)
 {
     return !(lhs == rhs);
 }
 
 inline
-bool operator<(const Name& lhs, const Name& rhs)
+bool blpapi::operator==(const Name& lhs, const char *rhs)
 {
-    return std::strcmp(lhs.string(), rhs.string()) < 0;
+    return blpapi_Name_equalsStr(lhs.impl(), rhs) != 0;
 }
 
 inline
-std::ostream& operator<<(std::ostream& stream,
-                         const Name& name)
+bool blpapi::operator!=(const Name& lhs, const char *rhs)
 {
-    stream << name.string();
-    return stream;
+    return !(lhs == rhs);
 }
 
+inline
+bool blpapi::operator==(const char *lhs, const Name& rhs)
+{
+    return rhs == lhs;
+}
 
-}  // close namespace blpapi
+inline
+bool blpapi::operator!=(const char *lhs, const Name& rhs)
+{
+    return !(rhs == lhs);
+}
+
+inline
+bool blpapi::operator<(const Name& lhs, const Name& rhs)
+{
+    return lhs.impl() < rhs.impl();
+}
+
+inline
+bool blpapi::operator<=(const Name& lhs, const Name& rhs)
+{
+    return !(rhs < lhs);
+}
+
+inline
+bool blpapi::operator>(const Name& lhs, const Name& rhs)
+{
+    return rhs < lhs;
+}
+
+inline
+bool blpapi::operator>=(const Name& lhs, const Name& rhs)
+{
+    return !(lhs < rhs);
+}
+
+inline
+std::ostream& blpapi::operator<<(std::ostream& stream, const Name& name)
+{
+    return stream << name.string();
+}
+
 }  // close namespace BloombergLP
 
 #endif // __cplusplus

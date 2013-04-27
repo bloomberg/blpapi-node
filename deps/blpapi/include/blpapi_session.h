@@ -140,6 +140,14 @@ int blpapi_Session_resubscribe(
         int requestLabelLen);
 
 BLPAPI_EXPORT
+int blpapi_Session_resubscribeWithId(
+        blpapi_Session_t *session,
+        const blpapi_SubscriptionList_t *resubscriptionList,
+        int resubscriptionId,
+        const char *requestLabel,
+        int requestLabelLen);
+
+BLPAPI_EXPORT
 int blpapi_Session_unsubscribe(
         blpapi_Session_t *session,
         const blpapi_SubscriptionList_t *unsubscriptionList,
@@ -520,14 +528,28 @@ class Session : public AbstractSession {
         // it is preferable not to aggressively re-use correlation
         // IDs, particularly with an asynchronous Session.
 
-    void resubscribe(
-            const SubscriptionList& subscriptions,
-            const char *requestLabel = 0,
-            int requestLabelLen = 0);
+    void resubscribe(const SubscriptionList& subscriptions);
         // Modify each subscription in the specified
         // 'subscriptionList' to reflect the modified options
-        // specified for it. If the optional 'requestLabel' and
-        // 'requestLabelLen' are provided they define a string which
+        // specified for it.
+        //
+        // For each entry in the 'subscriptionList' which has a
+        // correlation ID which identifies a current subscription the
+        // modified options replace the current options for the
+        // subscription and a SUBSCRIPTION_STATUS event will be
+        // generated in the event stream before the first update based
+        // on the new options. If the correlation ID of an entry in
+        // the 'subscriptionList' does not identify a current
+        // subscription then an exception is thrown.
+
+    void resubscribe(
+            const SubscriptionList& subscriptions,
+            const char *requestLabel,
+            int requestLabelLen);
+        // Modify each subscription in the specified
+        // 'subscriptionList' to reflect the modified options
+        // specified for it. The specified 'requestLabel' and
+        // 'requestLabelLen' define a string which
         // will be recorded along with any diagnostics for this
         // operation. There must be at least 'requestLabelLen'
         // printable characters at the location 'requestLabel'.
@@ -539,7 +561,47 @@ class Session : public AbstractSession {
         // generated in the event stream before the first update based
         // on the new options. If the correlation ID of an entry in
         // the 'subscriptionList' does not identify a current
-        // subscription then that entry is ignored.
+        // subscription then an exception is thrown.
+
+    void resubscribe(
+            const SubscriptionList& subscriptions,
+            int resubscriptionId);
+        // Modify each subscription in the specified
+        // 'subscriptionList' to reflect the modified options
+        // specified for it.
+        //
+        // For each entry in the 'subscriptionList' which has a
+        // correlation ID which identifies a current subscription the
+        // modified options replace the current options for the
+        // subscription and a SUBSCRIPTION_STATUS event containing the
+        // specified 'resubscriptionId' will be generated in the event
+        // stream before the first update based on the new options. If
+        // the correlation ID of an entry in the 'subscriptionList'
+        // does not identify a current subscription then an exception
+        // is thrown.
+
+    void resubscribe(
+            const SubscriptionList& subscriptions,
+            int resubscriptionId,
+            const char *requestLabel,
+            int requestLabelLen);
+        // Modify each subscription in the specified
+        // 'subscriptionList' to reflect the modified options
+        // specified for it. The specified 'requestLabel' and
+        // 'requestLabelLen' define a string which
+        // will be recorded along with any diagnostics for this
+        // operation. There must be at least 'requestLabelLen'
+        // printable characters at the location 'requestLabel'.
+        //
+        // For each entry in the 'subscriptionList' which has a
+        // correlation ID which identifies a current subscription the
+        // modified options replace the current options for the
+        // subscription and a SUBSCRIPTION_STATUS event containing the
+        // specified 'resubscriptionId' will be generated in the event
+        // stream before the first update based on the new options. If
+        // the correlation ID of an entry in the 'subscriptionList'
+        // does not identify a current subscription then an exception
+        // is thrown.
 
     void setStatusCorrelationId(
             const Service& service,
@@ -761,8 +823,8 @@ int Session::tryNextEvent(Event *event)
 
 inline
 void Session::subscribe(const SubscriptionList& subscriptions,
-                              const char *requestLabel,
-                              int requestLabelLen)
+                        const char *requestLabel,
+                        int requestLabelLen)
 {
     ExceptionUtil::throwOnError(
         blpapi_Session_subscribe(d_handle_p, subscriptions.impl(),
@@ -772,9 +834,9 @@ void Session::subscribe(const SubscriptionList& subscriptions,
 
 inline
 void Session::subscribe(const SubscriptionList& subscriptions,
-                              const Identity& identity,
-                              const char *requestLabel,
-                              int requestLabelLen)
+                        const Identity& identity,
+                        const char *requestLabel,
+                        int requestLabelLen)
 {
     ExceptionUtil::throwOnError(
         blpapi_Session_subscribe(d_handle_p, subscriptions.impl(),
@@ -783,13 +845,44 @@ void Session::subscribe(const SubscriptionList& subscriptions,
 }
 
 inline
+void Session::resubscribe(const SubscriptionList& subscriptions)
+{
+    ExceptionUtil::throwOnError(
+        blpapi_Session_resubscribe(d_handle_p, subscriptions.impl(),
+            0, 0)
+    );
+}
+
+inline
 void Session::resubscribe(const SubscriptionList& subscriptions,
-                                const char *requestLabel,
-                                int requestLabelLen)
+                          const char *requestLabel,
+                          int requestLabelLen)
 {
     ExceptionUtil::throwOnError(
         blpapi_Session_resubscribe(d_handle_p, subscriptions.impl(),
             requestLabel, requestLabelLen)
+    );
+}
+
+inline
+void Session::resubscribe(const SubscriptionList& subscriptions,
+                          int resubscriptionId)
+{
+    ExceptionUtil::throwOnError(
+        BLPAPI_CALL_SESSION_RESUBSCRIBEWITHID(d_handle_p, subscriptions.impl(),
+            resubscriptionId, 0, 0)
+    );
+}
+
+inline
+void Session::resubscribe(const SubscriptionList& subscriptions,
+                          int resubscriptionId,
+                          const char *requestLabel,
+                          int requestLabelLen)
+{
+    ExceptionUtil::throwOnError(
+        BLPAPI_CALL_SESSION_RESUBSCRIBEWITHID(d_handle_p, subscriptions.impl(),
+            resubscriptionId, requestLabel, requestLabelLen)
     );
 }
 

@@ -54,168 +54,159 @@ extern "C" {
 #endif
 
 BLPAPI_EXPORT
-blpapi_EventFormatter_t* blpapi_EventFormatter_create(blpapi_Event_t* event);
+blpapi_EventFormatter_t *blpapi_EventFormatter_create(blpapi_Event_t *event);
 
 BLPAPI_EXPORT
-void blpapi_EventFormatter_destroy(blpapi_EventFormatter_t* victim);
+void blpapi_EventFormatter_destroy(blpapi_EventFormatter_t *victim);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_appendMessage(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    blpapi_Name_t* typeName,
-    const blpapi_Topic_t* topic);
+int blpapi_EventFormatter_appendMessage(blpapi_EventFormatter_t *formatter,
+                                        const char              *typeString,
+                                        blpapi_Name_t           *typeName,
+                                        const blpapi_Topic_t    *topic);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_appendMessageSeq(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    blpapi_Name_t* typeName,
-    const blpapi_Topic_t* topic,
-    unsigned int sequenceNumber,
-    unsigned int);
+                                      blpapi_EventFormatter_t *formatter,
+                                      const char              *typeString,
+                                      blpapi_Name_t           *typeName,
+                                      const blpapi_Topic_t    *topic,
+                                      unsigned int             sequenceNumber,
+                                      unsigned                 int);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_appendResponse(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    blpapi_Name_t* typeName);
+int blpapi_EventFormatter_appendResponse(blpapi_EventFormatter_t *formatter,
+                                         const char              *typeString,
+                                         blpapi_Name_t           *typeName);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_appendRecapMessage(
-    blpapi_EventFormatter_t* formatter,
-    const blpapi_Topic_t *topic,
-    const blpapi_CorrelationId_t *cid);
+                                      blpapi_EventFormatter_t      *formatter,
+                                      const blpapi_Topic_t         *topic,
+                                      const blpapi_CorrelationId_t *cid);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_appendRecapMessageSeq(
-    blpapi_EventFormatter_t* formatter,
-    const blpapi_Topic_t *topic,
-    const blpapi_CorrelationId_t *cid,
-    unsigned int sequenceNumber,
-    unsigned int);
+                                 blpapi_EventFormatter_t      *formatter,
+                                 const blpapi_Topic_t         *topic,
+                                 const blpapi_CorrelationId_t *cid,
+                                 unsigned int                  sequenceNumber,
+                                 unsigned                      int);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_setValueBool(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    blpapi_Bool_t value);
+int blpapi_EventFormatter_setValueBool(blpapi_EventFormatter_t *formatter,
+                                       const char              *typeString,
+                                       const blpapi_Name_t     *typeName,
+                                       blpapi_Bool_t            value);
+
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_setValueChar(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    char value);
+int blpapi_EventFormatter_setValueChar(blpapi_EventFormatter_t *formatter,
+                                       const char              *typeString,
+                                       const blpapi_Name_t     *typeName,
+                                       char                     value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_setValueInt32(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    blpapi_Int32_t value);
+int blpapi_EventFormatter_setValueInt32(blpapi_EventFormatter_t *formatter,
+                                        const char              *typeString,
+                                        const blpapi_Name_t     *typeName,
+                                        blpapi_Int32_t           value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_setValueInt64(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    blpapi_Int64_t value);
+int blpapi_EventFormatter_setValueInt64(blpapi_EventFormatter_t *formatter,
+                                        const char              *typeString,
+                                        const blpapi_Name_t     *typeName,
+                                        blpapi_Int64_t           value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_setValueFloat32(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    blpapi_Float32_t value);
+int blpapi_EventFormatter_setValueFloat32(blpapi_EventFormatter_t *formatter,
+                                          const char              *typeString,
+                                          const blpapi_Name_t     *typeName,
+                                          blpapi_Float32_t         value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_setValueFloat64(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    blpapi_Float64_t value);
+int blpapi_EventFormatter_setValueFloat64(blpapi_EventFormatter_t *formatter,
+                                          const char              *typeString,
+                                          const blpapi_Name_t     *typeName,
+                                          blpapi_Float64_t         value);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_setValueDatetime(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    const blpapi_Datetime_t* value);
+                                          blpapi_EventFormatter_t *formatter,
+                                          const char              *typeString,
+                                          const blpapi_Name_t     *typeName,
+                                          const blpapi_Datetime_t *value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_setValueString(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    const char* value);
+int blpapi_EventFormatter_setValueString(blpapi_EventFormatter_t *formatter,
+                                         const char              *typeString,
+                                         const blpapi_Name_t     *typeName,
+                                         const char              *value);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_setValueFromName(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName,
-    const blpapi_Name_t* value);
+                                          blpapi_EventFormatter_t *formatter,
+                                          const char              *typeString,
+                                          const blpapi_Name_t     *typeName,
+                                          const blpapi_Name_t     *value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_pushElement(
-    blpapi_EventFormatter_t* formatter,
-    char const* typeString,
-    const blpapi_Name_t* typeName);
+int blpapi_EventFormatter_setValueNull(blpapi_EventFormatter_t *formatter,
+                                       const char              *typeString,
+                                       const blpapi_Name_t     *typeName);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_popElement(
-    blpapi_EventFormatter_t* formatter);
+int blpapi_EventFormatter_pushElement(blpapi_EventFormatter_t *formatter,
+                                      const char              *typeString,
+                                      const blpapi_Name_t     *typeName);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_appendValueBool(
-    blpapi_EventFormatter_t* formatter,
-    blpapi_Bool_t value);
+int blpapi_EventFormatter_popElement(blpapi_EventFormatter_t *formatter);
+
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_appendValueChar(
-    blpapi_EventFormatter_t* formatter,
-    char value);
+int blpapi_EventFormatter_appendValueBool(blpapi_EventFormatter_t *formatter,
+                                          blpapi_Bool_t            value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_appendValueInt32(
-    blpapi_EventFormatter_t* formatter,
-    blpapi_Int32_t value);
+int blpapi_EventFormatter_appendValueChar(blpapi_EventFormatter_t *formatter,
+                                          char                     value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_appendValueInt64(
-    blpapi_EventFormatter_t* formatter,
-    blpapi_Int64_t value);
+int blpapi_EventFormatter_appendValueInt32(blpapi_EventFormatter_t *formatter,
+                                           blpapi_Int32_t           value);
+
+BLPAPI_EXPORT
+int blpapi_EventFormatter_appendValueInt64(blpapi_EventFormatter_t *formatter,
+                                           blpapi_Int64_t           value);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_appendValueFloat32(
-    blpapi_EventFormatter_t* formatter,
-    blpapi_Float32_t value);
+                                           blpapi_EventFormatter_t *formatter,
+                                           blpapi_Float32_t         value);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_appendValueFloat64(
-    blpapi_EventFormatter_t* formatter,
-    blpapi_Float64_t value);
+                                           blpapi_EventFormatter_t *formatter,
+                                           blpapi_Float64_t         value);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_appendValueDatetime(
-    blpapi_EventFormatter_t* formatter,
-    const blpapi_Datetime_t* value);
+                                           blpapi_EventFormatter_t *formatter,
+                                           const blpapi_Datetime_t *value);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_appendValueString(
-    blpapi_EventFormatter_t* formatter,
-    const char* value);
+                                           blpapi_EventFormatter_t *formatter,
+                                           const char              *value);
 
 BLPAPI_EXPORT
 int blpapi_EventFormatter_appendValueFromName(
-    blpapi_EventFormatter_t* formatter,
-    const blpapi_Name_t* value);
+                                           blpapi_EventFormatter_t *formatter,
+                                           const blpapi_Name_t     *value);
 
 BLPAPI_EXPORT
-int blpapi_EventFormatter_appendElement(
-    blpapi_EventFormatter_t* formatter);
+int blpapi_EventFormatter_appendElement(blpapi_EventFormatter_t *formatter);
 
 #ifdef __cplusplus
 }
@@ -243,7 +234,7 @@ class EventFormatter {
     // name more than once at a particular level of the schema when
     // creating a message.
 
-    blpapi_EventFormatter_t* d_handle;
+    blpapi_EventFormatter_t *d_handle;
 
   private:
     // NOT IMPLEMENTED
@@ -267,14 +258,14 @@ class EventFormatter {
 
     // MANIPULATORS
 
-    void appendMessage(const char* messageType, Topic const& topic);
+    void appendMessage(const char *messageType, const Topic& topic);
         // Append an (empty) message of the specified 'messageType'
         // that will be published under the specified 'topic' to the
         // Event referenced by this EventFormatter. After a message
         // has been appended its elements can be set using the various
         // setElement() methods.
 
-    void appendMessage(Name const& messageType, Topic const& topic);
+    void appendMessage(const Name& messageType, const Topic& topic);
         // Append an (empty) message of the specified 'messageType'
         // that will be published under the specified 'topic' to the
         // Event referenced by this EventFormatter. After a message
@@ -282,7 +273,7 @@ class EventFormatter {
         // setElement() methods.
 
     void appendMessage(const char   *messageType,
-                       Topic const&  topic,
+                       const Topic&  topic,
                        unsigned int  sequenceNumber);
         // Append an (empty) message of the specified 'messageType'
         // that will be published under the specified 'topic' with the
@@ -294,8 +285,8 @@ class EventFormatter {
         // After a message has been appended its elements
         // can be set using the various setElement() methods.
 
-    void appendMessage(Name const&  messageType,
-                       Topic const& topic,
+    void appendMessage(const Name&  messageType,
+                       const Topic& topic,
                        unsigned int sequenceNumber);
         // Append an (empty) message of the specified 'messageType'
         // that will be published under the specified 'topic' with the
@@ -307,21 +298,21 @@ class EventFormatter {
         // After a message has been appended its elements
         // can be set using the various setElement() methods.
 
-    void appendResponse(const char* opType);
+    void appendResponse(const char *opType);
         // Append an (empty) response message of the specified 'opType'
         // that will be sent in response to previously received
         // operation request. After a message has been appended its
         // elements can be set using the various setElement() methods.
         // Only one response can be appended.
 
-    void appendResponse(Name const& opType);
+    void appendResponse(const Name& opType);
         // Append an (empty) response message of the specified 'opType'
         // that will be sent in response to previously received
         // operation request. After a message has been appended its
         // elements can be set using the various setElement() methods.
         // Only one response can be appended.
 
-    void appendRecapMessage(Topic const& topic, const CorrelationId* cid = 0);
+    void appendRecapMessage(const Topic& topic, const CorrelationId *cid = 0);
         // Append a (empty) recap message that will be published under the
         // specified 'topic' to the Publish Event referenced by this
         // EventFormatter. Specify the optional CorrelationId pointer 'cid'
@@ -330,7 +321,7 @@ class EventFormatter {
         // the various setElement() methods. It is an error to create append
         // a recap message to an Admin event.
 
-    void appendRecapMessage(Topic const&         topic,
+    void appendRecapMessage(const Topic&         topic,
                             unsigned int         sequenceNumber,
                             const CorrelationId *cid = 0);
         // Append a (empty) recap message that will be published under the
@@ -345,7 +336,7 @@ class EventFormatter {
         // the various setElement() methods. It is an error to create append
         // a recap message to an Admin event.
 
-    void setElement(const char* name, bool value);
+    void setElement(const char *name, bool value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -353,7 +344,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(const char* name, char value);
+    void setElement(const char *name, char value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -361,7 +352,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(const char* name, Int32 value);
+    void setElement(const char *name, Int32 value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -369,7 +360,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(const char* name, Int64 value);
+    void setElement(const char *name, Int64 value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -377,7 +368,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(const char* name, Float32 value);
+    void setElement(const char *name, Float32 value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -385,7 +376,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(const char* name, Float64 value);
+    void setElement(const char *name, Float64 value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -393,7 +384,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(const char* name, Datetime const& value);
+    void setElement(const char *name, const Datetime& value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -401,7 +392,19 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(const char* name, char const* value);
+    void setElement(const char *name, const char *value);
+        // Set the element with the specified 'name' to the specified
+        // 'value' in the current message in the Event referenced by
+        // this EventFormatter. If the 'name' is invalid for the
+        // current message, if appendMessage() has never been called
+        // or if the element identified by 'name' has already been set
+        // an exception is thrown. The behavior is undefined unless 'value'
+        // is not 'NULL'.
+        // Clients wishing to format and publish null values (e.g. for the
+        // purpose of cache management) should *not* use this function; use
+        // 'setElementNull' instead.
+
+    void setElement(const char *name, const Name& value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -409,7 +412,12 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(const char* name, Name const& value);
+    void setElementNull(const char *name);
+        // Create a null element with the specified 'name'. Note that whether
+        // or not fields containing null values are published to subscribers is
+        // dependent upon details of the service and schema configuration.
+
+    void setElement(const Name& name, bool value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -417,7 +425,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(Name const& name, bool value);
+    void setElement(const Name& name, char value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -425,7 +433,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(Name const& name, char value);
+    void setElement(const Name& name, Int32 value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -433,7 +441,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(Name const& name, Int32 value);
+    void setElement(const Name& name, Int64 value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -441,7 +449,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(Name const& name, Int64 value);
+    void setElement(const Name& name, Float32 value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -449,7 +457,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(Name const& name, Float32 value);
+    void setElement(const Name& name, Float64 value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -457,7 +465,7 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(Name const& name, Float64 value);
+    void setElement(const Name& name, const Datetime& value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -465,7 +473,19 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(Name const& name, Datetime const& value);
+    void setElement(const Name& name, const char *value);
+        // Set the element with the specified 'name' to the specified
+        // 'value' in the current message in the Event referenced by
+        // this EventFormatter. If the 'name' is invalid for the
+        // current message, if appendMessage() has never been called
+        // or if the element identified by 'name' has already been set
+        // an exception is thrown. The behavior is undefined unless 'value'
+        // is not 'NULL'.
+        // Clients wishing to format and publish null values (e.g. for the
+        // purpose of cache management) should *not* use this function; use
+        // 'setElementNull' instead.
+
+    void setElement(const Name& name, const Name& value);
         // Set the element with the specified 'name' to the specified
         // 'value' in the current message in the Event referenced by
         // this EventFormatter. If the 'name' is invalid for the
@@ -473,23 +493,12 @@ class EventFormatter {
         // or if the element identified by 'name' has already been set
         // an exception is thrown.
 
-    void setElement(Name const& name, char const* value);
-        // Set the element with the specified 'name' to the specified
-        // 'value' in the current message in the Event referenced by
-        // this EventFormatter. If the 'name' is invalid for the
-        // current message, if appendMessage() has never been called
-        // or if the element identified by 'name' has already been set
-        // an exception is thrown.
+    void setElementNull(const Name& name);
+        // Create a null element with the specified 'name'. Note that whether
+        // or not fields containing null values are published to subscribers is
+        // dependent upon details of the service and schema configuration.
 
-    void setElement(Name const& name, Name const& value);
-        // Set the element with the specified 'name' to the specified
-        // 'value' in the current message in the Event referenced by
-        // this EventFormatter. If the 'name' is invalid for the
-        // current message, if appendMessage() has never been called
-        // or if the element identified by 'name' has already been set
-        // an exception is thrown.
-
-    void pushElement(char const* name);
+    void pushElement(const char *name);
         // Changes the level at which this EventFormatter is operating
         // to the specified element 'name'. The element 'name' must
         // identify either a choice, a sequence or an array at the
@@ -504,7 +513,7 @@ class EventFormatter {
         // EventFormatter to that element. Calling appendElement()
         // again will create another entry.
 
-    void pushElement(Name const& name);
+    void pushElement(const Name& name);
         // Changes the level at which this EventFormatter is operating
         // to the specified element 'name'. The element 'name' must
         // identify either a choice, a sequence or an array at the
@@ -538,11 +547,11 @@ class EventFormatter {
 
     void appendValue(Float64 value);
 
-    void appendValue(Datetime const& value);
+    void appendValue(const Datetime& value);
 
-    void appendValue(char const* value);
+    void appendValue(const char *value);
 
-    void appendValue(Name const& value);
+    void appendValue(const Name& value);
 
     void appendElement();
 };
@@ -568,7 +577,7 @@ EventFormatter::~EventFormatter()
 }
 
 inline
-void EventFormatter::appendMessage(char const* messageType, Topic const& topic)
+void EventFormatter::appendMessage(const char *messageType, const Topic& topic)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_appendMessage(
                                     d_handle,
@@ -577,7 +586,7 @@ void EventFormatter::appendMessage(char const* messageType, Topic const& topic)
 }
 
 inline
-void EventFormatter::appendMessage(Name const& messageType, Topic const& topic)
+void EventFormatter::appendMessage(const Name& messageType, const Topic& topic)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_appendMessage(
                                     d_handle,
@@ -586,8 +595,8 @@ void EventFormatter::appendMessage(Name const& messageType, Topic const& topic)
 }
 
 inline
-void EventFormatter::appendMessage(char const   *messageType,
-                                   Topic const&  topic,
+void EventFormatter::appendMessage(const char   *messageType,
+                                   const Topic&  topic,
                                    unsigned int  sequenceNumber)
 {
     ExceptionUtil::throwOnError(BLPAPI_CALL_EVENTFORMATTER_APPENDMESSAGESEQ(
@@ -600,8 +609,8 @@ void EventFormatter::appendMessage(char const   *messageType,
 }
 
 inline
-void EventFormatter::appendMessage(Name const&  messageType,
-                                   Topic const& topic,
+void EventFormatter::appendMessage(const Name&  messageType,
+                                   const Topic& topic,
                                    unsigned int sequenceNumber)
 {
     ExceptionUtil::throwOnError(BLPAPI_CALL_EVENTFORMATTER_APPENDMESSAGESEQ(
@@ -614,7 +623,7 @@ void EventFormatter::appendMessage(Name const&  messageType,
 }
 
 inline
-void EventFormatter::appendResponse(char const* opType)
+void EventFormatter::appendResponse(const char *opType)
 {
     ExceptionUtil::throwOnError(
         blpapi_EventFormatter_appendResponse(
@@ -624,7 +633,7 @@ void EventFormatter::appendResponse(char const* opType)
 }
 
 inline
-void EventFormatter::appendResponse(Name const& opType)
+void EventFormatter::appendResponse(const Name& opType)
 {
     ExceptionUtil::throwOnError(
         blpapi_EventFormatter_appendResponse(
@@ -634,7 +643,7 @@ void EventFormatter::appendResponse(Name const& opType)
 }
 
 inline
-void EventFormatter::appendRecapMessage(Topic const&         topic,
+void EventFormatter::appendRecapMessage(const Topic&         topic,
                                         const CorrelationId *cid)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_appendRecapMessage(
@@ -644,7 +653,7 @@ void EventFormatter::appendRecapMessage(Topic const&         topic,
 }
 
 inline
-void EventFormatter::appendRecapMessage(Topic const&         topic,
+void EventFormatter::appendRecapMessage(const Topic&         topic,
                                         unsigned int         sequenceNumber,
                                         const CorrelationId *cid)
 {
@@ -660,7 +669,7 @@ void EventFormatter::appendRecapMessage(Topic const&         topic,
 }
 
 inline
-void EventFormatter::setElement(char const* name, bool value)
+void EventFormatter::setElement(const char *name, bool value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueBool(
                                     d_handle,
@@ -669,7 +678,7 @@ void EventFormatter::setElement(char const* name, bool value)
 }
 
 inline
-void EventFormatter::setElement(char const* name, char value)
+void EventFormatter::setElement(const char *name, char value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueChar(
                                     d_handle,
@@ -678,7 +687,7 @@ void EventFormatter::setElement(char const* name, char value)
 }
 
 inline
-void EventFormatter::setElement(char const* name, Int32 value)
+void EventFormatter::setElement(const char *name, Int32 value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueInt32(
                                     d_handle,
@@ -687,7 +696,7 @@ void EventFormatter::setElement(char const* name, Int32 value)
 }
 
 inline
-void EventFormatter::setElement(char const* name, Int64 value)
+void EventFormatter::setElement(const char *name, Int64 value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueInt64(
                                     d_handle,
@@ -696,7 +705,7 @@ void EventFormatter::setElement(char const* name, Int64 value)
 }
 
 inline
-void EventFormatter::setElement(char const* name, Float32 value)
+void EventFormatter::setElement(const char *name, Float32 value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueFloat32(
                                     d_handle,
@@ -705,7 +714,7 @@ void EventFormatter::setElement(char const* name, Float32 value)
 }
 
 inline
-void EventFormatter::setElement(char const* name, Float64 value)
+void EventFormatter::setElement(const char *name, Float64 value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueFloat64(
                                     d_handle,
@@ -713,9 +722,8 @@ void EventFormatter::setElement(char const* name, Float64 value)
                                     value));
 }
 
-
 inline
-void EventFormatter::setElement(char const* name, Datetime const& value)
+void EventFormatter::setElement(const char *name, const Datetime& value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueDatetime(
                                     d_handle,
@@ -723,16 +731,18 @@ void EventFormatter::setElement(char const* name, Datetime const& value)
                                     &value.rawValue()));
 
 }
+
 inline
-void EventFormatter::setElement(char const* name, char const* value)
+void EventFormatter::setElement(const char *name, const char *value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueString(
                                     d_handle,
                                     name, 0,
                                     value));
 }
+
 inline
-void EventFormatter::setElement(char const* name, Name const& value)
+void EventFormatter::setElement(const char *name, const Name& value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueFromName(
                                     d_handle,
@@ -741,7 +751,16 @@ void EventFormatter::setElement(char const* name, Name const& value)
 }
 
 inline
-void EventFormatter::setElement(Name const& name, bool value)
+void EventFormatter::setElementNull(const char *name)
+{
+    ExceptionUtil::throwOnError(
+        BLPAPI_CALL_EVENTFORMATTER_SETVALUENULL(d_handle,
+                                                name,
+                                                0));
+}
+
+inline
+void EventFormatter::setElement(const Name& name, bool value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueBool(
                                     d_handle,
@@ -750,7 +769,7 @@ void EventFormatter::setElement(Name const& name, bool value)
 }
 
 inline
-void EventFormatter::setElement(Name const& name, char value)
+void EventFormatter::setElement(const Name& name, char value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueChar(
                                     d_handle,
@@ -759,7 +778,7 @@ void EventFormatter::setElement(Name const& name, char value)
 }
 
 inline
-void EventFormatter::setElement(Name const& name, Int32 value)
+void EventFormatter::setElement(const Name& name, Int32 value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueInt32(
                                     d_handle,
@@ -768,7 +787,7 @@ void EventFormatter::setElement(Name const& name, Int32 value)
 }
 
 inline
-void EventFormatter::setElement(Name const& name, Int64 value)
+void EventFormatter::setElement(const Name& name, Int64 value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueInt64(
                                     d_handle,
@@ -777,7 +796,7 @@ void EventFormatter::setElement(Name const& name, Int64 value)
 }
 
 inline
-void EventFormatter::setElement(Name const& name, Float32 value)
+void EventFormatter::setElement(const Name& name, Float32 value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueFloat32(
                                     d_handle,
@@ -785,7 +804,7 @@ void EventFormatter::setElement(Name const& name, Float32 value)
                                     value));
 }
 inline
-void EventFormatter::setElement(Name const& name, Float64 value)
+void EventFormatter::setElement(const Name& name, Float64 value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueFloat64(
                                     d_handle,
@@ -793,7 +812,7 @@ void EventFormatter::setElement(Name const& name, Float64 value)
                                     value));
 }
 inline
-void EventFormatter::setElement(Name const& name, Datetime const& value)
+void EventFormatter::setElement(const Name& name, const Datetime& value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueDatetime(
                                     d_handle,
@@ -801,7 +820,7 @@ void EventFormatter::setElement(Name const& name, Datetime const& value)
                                     &value.rawValue()));
 }
 inline
-void EventFormatter::setElement(Name const& name, char const* value)
+void EventFormatter::setElement(const Name& name, const char *value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueString(
                                     d_handle,
@@ -809,7 +828,7 @@ void EventFormatter::setElement(Name const& name, char const* value)
                                     value));
 }
 inline
-void EventFormatter::setElement(Name const& name, Name const& value)
+void EventFormatter::setElement(const Name& name, const Name& value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_setValueFromName(
                                     d_handle,
@@ -818,14 +837,23 @@ void EventFormatter::setElement(Name const& name, Name const& value)
 }
 
 inline
-void EventFormatter::pushElement(char const* name)
+void EventFormatter::setElementNull(const Name& name)
+{
+    ExceptionUtil::throwOnError(
+        BLPAPI_CALL_EVENTFORMATTER_SETVALUENULL(d_handle,
+                                                0,
+                                                name.impl()));
+}
+
+inline
+void EventFormatter::pushElement(const char *name)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_pushElement(
                                     d_handle, name, 0));
 }
 
 inline
-void EventFormatter::pushElement(Name const& name)
+void EventFormatter::pushElement(const Name& name)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_pushElement(
                                     d_handle, 0, name.impl()));
@@ -888,7 +916,7 @@ void EventFormatter::appendValue(Float64 value)
 
 
 inline
-void EventFormatter::appendValue(Datetime const& value)
+void EventFormatter::appendValue(const Datetime& value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_appendValueDatetime(
                                     d_handle,
@@ -896,14 +924,14 @@ void EventFormatter::appendValue(Datetime const& value)
 
 }
 inline
-void EventFormatter::appendValue(char const* value)
+void EventFormatter::appendValue(const char *value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_appendValueString(
                                     d_handle,
                                     value));
 }
 inline
-void EventFormatter::appendValue(Name const& value)
+void EventFormatter::appendValue(const Name& value)
 {
     ExceptionUtil::throwOnError(blpapi_EventFormatter_appendValueFromName(
                                     d_handle,

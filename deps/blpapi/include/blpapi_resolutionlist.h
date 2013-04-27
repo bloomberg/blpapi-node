@@ -106,13 +106,13 @@ int blpapi_ResolutionList_correlationIdAt(
 BLPAPI_EXPORT
 int blpapi_ResolutionList_topicString(
     const blpapi_ResolutionList_t* list,
-    char const** topic,
+    const char** topic,
     const blpapi_CorrelationId_t* id);
 
 BLPAPI_EXPORT
 int blpapi_ResolutionList_topicStringAt(
     const blpapi_ResolutionList_t* list,
-    char const** topic,
+    const char** topic,
     size_t index);
 
 BLPAPI_EXPORT
@@ -214,7 +214,7 @@ class ResolutionList {
 
     // MANIPULATORS
 
-    int add(char const* topic,
+    int add(const char* topic,
             const CorrelationId& correlationId=CorrelationId());
         // Add the specified 'topic' to this list, optionally
         // specifying a 'correlationId'. Returns 0 on success or
@@ -242,13 +242,13 @@ class ResolutionList {
         // this ResolutionList. If 'index' >= size() an exception is
         // thrown.
 
-    char const* topicString(const CorrelationId& correlationId) const;
+    const char* topicString(const CorrelationId& correlationId) const;
         // Returns a pointer to the topic of the entry identified by
         // the specified 'correlationId'. If the 'correlationId' does
         // not identify an entry in this ResolutionList then an
         // exception is thrown.
 
-    char const* topicStringAt(size_t index) const;
+    const char* topicStringAt(size_t index) const;
         // Returns a pointer to the topic of the specified 'index'th
         // entry. If 'index' >= size() an exception is thrown.
 
@@ -356,7 +356,7 @@ ResolutionList::~ResolutionList()
 }
 
 inline
-int ResolutionList::add(char const* topic,
+int ResolutionList::add(const char* topic,
                                const CorrelationId& correlationId)
 {
     return blpapi_ResolutionList_add(d_handle_p, topic, &correlationId.impl());
@@ -390,10 +390,10 @@ CorrelationId ResolutionList::correlationIdAt(size_t index) const
 }
 
 inline
-char const* ResolutionList::topicString(
+const char* ResolutionList::topicString(
                                       const CorrelationId& correlationId) const
 {
-    char const* topic;
+    const char* topic;
     ExceptionUtil::throwOnError(
         blpapi_ResolutionList_topicString(d_handle_p,
                                           &topic,
@@ -403,9 +403,9 @@ char const* ResolutionList::topicString(
 }
 
 inline
-char const* ResolutionList::topicStringAt(size_t index) const
+const char* ResolutionList::topicStringAt(size_t index) const
 {
-    char const* topic;
+    const char* topic;
     ExceptionUtil::throwOnError(
         blpapi_ResolutionList_topicStringAt(d_handle_p, &topic, index));
 

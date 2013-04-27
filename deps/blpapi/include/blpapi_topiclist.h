@@ -93,13 +93,13 @@ int blpapi_TopicList_correlationIdAt(
 BLPAPI_EXPORT
 int blpapi_TopicList_topicString(
     const blpapi_TopicList_t* list,
-    char const** topic,
+    const char** topic,
     const blpapi_CorrelationId_t* id);
 
 BLPAPI_EXPORT
 int blpapi_TopicList_topicStringAt(
     const blpapi_TopicList_t* list,
-    char const** topic,
+    const char** topic,
     size_t index);
 
 BLPAPI_EXPORT
@@ -179,7 +179,7 @@ class TopicList {
         // Destroy this TopicList.
 
     // MANIPULATORS
-    int add(char const* topic,
+    int add(const char* topic,
             const CorrelationId& correlationId=CorrelationId());
         // Add the specified 'topic' to this list, optionally
         // specifying a 'correlationId'. Returns 0 on success or
@@ -201,13 +201,13 @@ class TopicList {
         // this TopicList. If 'index' >= size() an exception is
         // thrown.
 
-    char const* topicString(const CorrelationId& correlationId) const;
+    const char* topicString(const CorrelationId& correlationId) const;
         // Returns a pointer to the topic of the entry identified by
         // the specified 'correlationId'. If the 'correlationId' does
         // not identify an entry in this TopicList then an
         // exception is thrown.
 
-    char const* topicStringAt(size_t index) const;
+    const char* topicStringAt(size_t index) const;
         // Returns a pointer to the topic of the specified 'index'th
         // entry. If 'index' >= size() an exception is thrown.
 
@@ -287,7 +287,7 @@ TopicList::~TopicList()
 }
 
 inline
-int TopicList::add(char const* topic,
+int TopicList::add(const char* topic,
                                const CorrelationId& correlationId)
 {
     return blpapi_TopicList_add(d_handle_p, topic, &correlationId.impl());
@@ -312,9 +312,9 @@ CorrelationId TopicList::correlationIdAt(size_t index) const
 }
 
 inline
-char const* TopicList::topicString(const CorrelationId& correlationId) const
+const char* TopicList::topicString(const CorrelationId& correlationId) const
 {
-    char const* topic;
+    const char* topic;
     ExceptionUtil::throwOnError(
         blpapi_TopicList_topicString(d_handle_p,
                                      &topic,
@@ -324,9 +324,9 @@ char const* TopicList::topicString(const CorrelationId& correlationId) const
 }
 
 inline
-char const* TopicList::topicStringAt(size_t index) const
+const char* TopicList::topicStringAt(size_t index) const
 {
-    char const* topic;
+    const char* topic;
     ExceptionUtil::throwOnError(
         blpapi_TopicList_topicStringAt(d_handle_p, &topic, index));
 

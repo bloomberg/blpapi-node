@@ -203,10 +203,10 @@ class CorrelationId {
     };
 
     CorrelationId();
-        // The default constructor creates an unitialized
+        // The default constructor creates an uninitialized
         // CorrelationId. This will compare equal to another
         // CorrelationId object constructed using the default
-        // constructor. The only valid operations on an unitialized
+        // constructor. The only valid operations on an uninitialized
         // CorrelationId are assignment, comparison for equality and
         // destruction.
 
