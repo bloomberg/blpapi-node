@@ -22,7 +22,6 @@
 
 #include <deque>
 #include <sstream>
-#include <vector>
 
 #include <cmath>
 #include <ctime>
@@ -71,13 +70,15 @@ namespace blpapijs {
 class Session : public ObjectWrap,
                 public blpapi::EventHandler {
 public:
-    Session(const char *host, int port);
+    Session(const std::string& serverHost, int serverPort,
+            const std::string& authenticationOptions);
     ~Session();
 
     static void Initialize(Handle<Object> target);
     static Handle<Value> New(const Arguments& args);
 
     static Handle<Value> Start(const Arguments& args);
+    static Handle<Value> Authorize(const Arguments& args);
     static Handle<Value> Stop(const Arguments& args);
     static Handle<Value> Destroy(const Arguments& args);
     static Handle<Value> OpenService(const Arguments& args);
@@ -116,6 +117,7 @@ private:
 
     blpapi::SessionOptions d_options;
     blpapi::Session *d_session;
+    blpapi::Identity d_identity;
     Persistent<Object> d_session_ref;
     std::deque<blpapi::Event> d_que;
     uv_mutex_t d_que_mutex;
@@ -133,12 +135,15 @@ Persistent<String> Session::s_value;
 Persistent<String> Session::s_class_id;
 Persistent<String> Session::s_data;
 
-Session::Session(const char *host, int port)
+Session::Session(const std::string& serverHost, int serverPort,
+                 const std::string& authenticationOptions)
     : d_started(false)
     , d_stopped(false)
 {
-    d_options.setServerHost(host);
-    d_options.setServerPort(port);
+    d_options.setServerHost(serverHost.c_str());
+    d_options.setServerPort(serverPort);
+    if (authenticationOptions.length())
+        d_options.setAuthenticationOptions(authenticationOptions.c_str());
 
     BLPAPI_EXCEPTION_TRY
     d_session = new blpapi::Session(d_options, this);
@@ -169,6 +174,7 @@ Session::Initialize(Handle<Object> target)
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
     NODE_SET_PROTOTYPE_METHOD(t, "start", Start);
+    NODE_SET_PROTOTYPE_METHOD(t, "authorize", Authorize);
     NODE_SET_PROTOTYPE_METHOD(t, "stop", Stop);
     NODE_SET_PROTOTYPE_METHOD(t, "destroy", Destroy);
     NODE_SET_PROTOTYPE_METHOD(t, "openService", OpenService);
@@ -198,35 +204,50 @@ Session::New(const Arguments& args)
 {
     HandleScope scope;
 
-    char host[128] = "";
-    int port = 0;
+    std::string serverHost;
+    int serverPort = 0;
+    std::string authenticationOptions;
 
     if (args.Length() > 0 && args[0]->IsObject()) {
         Local<Object> o = args[0]->ToObject();
 
         // Capture the host name
         Local<Value> h = o->Get(String::New("host"));
-        if (h->IsString()) {
-            h->ToString()->WriteAscii(host, 0, sizeof(host));
-            host[sizeof(host)-1] = '\0';
+        if (h->IsUndefined())
+            h = o->Get(String::New("serverHost"));
+        if (!h->IsUndefined()) {
+            String::AsciiValue hv(h);
+            if (hv.length())
+                serverHost.assign(*hv, hv.length());
         }
-        if (0 == host[0])
+        if (0 == serverHost.length())
             return ThrowException(Exception::Error(String::New(
-                        "Configuration missing 'host'.")));
+                        "Configuration missing 'serverHost'.")));
 
         // Capture the port number
         Local<Value> p = o->Get(String::New("port"));
+        if (p->IsUndefined())
+            p = o->Get(String::New("serverPort"));
         if (p->IsInt32())
-            port = p->ToInt32()->Value();
-        if (0 == port)
+            serverPort = p->ToInt32()->Value();
+        if (0 == serverPort)
             return ThrowException(Exception::Error(String::New(
-                        "Configuration missing non-zero 'port'.")));
+                        "Configuration missing non-zero 'serverPort'.")));
+
+        // Capture optional authentication options
+        Local<Value> ao = o->Get(String::New("authenticationOptions"));
+        if (!ao->IsUndefined()) {
+            String::AsciiValue aov(ao);
+            if (aov.length())
+                authenticationOptions.assign(*aov, aov.length());
+        }
     } else {
         return ThrowException(Exception::Error(String::New(
                         "Configuration object must be passed as parameter.")));
     }
 
-    Session *session = new Session(host, port);
+    Session *session = new Session(serverHost, serverPort,
+                                   authenticationOptions);
     session->Wrap(args.This());
     return scope.Close(args.This());
 }
@@ -253,6 +274,76 @@ Session::Start(const Arguments& args)
     session->d_started = true;
 
     return scope.Close(args.This());
+}
+
+Handle<Value>
+Session::Authorize(const Arguments& args)
+{
+    HandleScope scope;
+
+    if (args.Length() < 1 || !args[0]->IsString()) {
+        return ThrowException(Exception::Error(String::New(
+                "Service URI string must be provided as first parameter.")));
+    }
+    if (args.Length() < 2 || !args[1]->IsInt32()) {
+        return ThrowException(Exception::Error(String::New(
+                "Integer correlation identifier must be provided "
+                "as second parameter.")));
+    }
+    if (args.Length() > 2) {
+        return ThrowException(Exception::Error(String::New(
+                "Function expects at most two arguments.")));
+    }
+
+    Local<String> s = args[0]->ToString();
+    String::Utf8Value uriv(s);
+
+    int cidi = args[1]->Int32Value();
+
+    Session* session = ObjectWrap::Unwrap<Session>(args.This());
+
+    BLPAPI_EXCEPTION_TRY
+
+    blpapi::EventQueue tokenEventQueue;
+    blpapi::CorrelationId tokenCid(static_cast<void*>(&tokenEventQueue));
+    session->d_session->generateToken(tokenCid, &tokenEventQueue);
+
+    std::string token;
+    blpapi::Event ev = tokenEventQueue.nextEvent();
+    if (blpapi::Event::TOKEN_STATUS == ev.eventType() ||
+        blpapi::Event::REQUEST_STATUS == ev.eventType()) {
+        blpapi::MessageIterator msgIter(ev);
+        while (msgIter.next()) {
+            blpapi::Message msg = msgIter.message();
+            if ("TokenGenerationSuccess" == msg.messageType()) {
+                token = msg.getElementAsString("token");
+            } else {
+                std::stringstream ss;
+                ss << "Failed to generate token: " << msg.getElement("reason");
+                std::string s = ss.str();
+                return ThrowException(Exception::Error(String::New(
+                        s.c_str())));
+            }
+        }
+    }
+    if (0 == token.length()) {
+        return ThrowException(Exception::Error(String::New(
+                        "Failed to get token.")));
+    }
+
+    blpapi::Service authService = session->d_session->getService(*uriv);
+    blpapi::Request authRequest = authService.createAuthorizationRequest();
+    authRequest.set("token", token.c_str());
+
+    session->d_identity = session->d_session->createIdentity();
+
+    blpapi::CorrelationId cid(cidi);
+    session->d_session->sendAuthorizationRequest(authRequest,
+                                                 &session->d_identity, cid);
+
+    BLPAPI_EXCEPTION_CATCH_RETURN
+
+    return scope.Close(Integer::New(cidi));
 }
 
 Handle<Value>
@@ -323,9 +414,7 @@ Session::OpenService(const Arguments& args)
     }
 
     Local<String> s = args[0]->ToString();
-    std::vector<char> uriv;
-    uriv.resize(s->Utf8Length() + 1);
-    s->WriteUtf8(&uriv[0]);
+    String::Utf8Value uriv(s);
 
     int cidi = args[1]->Int32Value();
     blpapi::CorrelationId cid(cidi);
@@ -333,7 +422,7 @@ Session::OpenService(const Arguments& args)
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
     BLPAPI_EXCEPTION_TRY
-    session->d_session->openServiceAsync(&uriv[0], cid);
+    session->d_session->openServiceAsync(*uriv, cid);
     BLPAPI_EXCEPTION_CATCH_RETURN
 
     return scope.Close(Integer::New(cidi));
@@ -349,14 +438,14 @@ Session::formFields(std::string* str, Handle<Object> object)
     std::stringstream ss;
 
     // Format each array value into the options string "V[&V]"
-    for (size_t i = 0; i < Array::Cast(*object)->Length(); ++i) {
+    for (std::size_t i = 0; i < Array::Cast(*object)->Length(); ++i) {
         Local<String> s = object->Get(i)->ToString();
-        std::vector<char> v;
-        v.resize(s->Utf8Length() + 1);
-        s->WriteUtf8(&v[0]);
-        if (i > 0)
-            ss << ",";
-        ss << &v[0];
+        String::Utf8Value v(s);
+        if (v.length()) {
+            if (i > 0)
+                ss << ",";
+            ss << *v;
+        }
     }
 
     *str = ss.str();
@@ -377,33 +466,32 @@ Session::formOptions(std::string* str, Handle<Value> value)
     if (value->IsArray()) {
         // Format each array value into the options string "V[&V]"
         Local<Object> object = value->ToObject();
-        for (size_t i = 0; i < Array::Cast(*object)->Length(); ++i) {
+        for (std::size_t i = 0; i < Array::Cast(*object)->Length(); ++i) {
             Local<String> key = object->Get(i)->ToString();
-            std::vector<char> valv;
-            valv.resize(key->Utf8Length() + 1);
-            key->WriteUtf8(&valv[0]);
-            if (i > 0)
-                ss << "&";
-            ss << &valv[0];
+            String::Utf8Value valv(key);
+            if (valv.length()) {
+                if (i > 0)
+                    ss << "&";
+                ss << *valv;
+            }
         }
     } else {
         // Format each KV pair into the options string "K=V[&K=V]"
         Local<Object> object = value->ToObject();
         Local<Array> keys = object->GetPropertyNames();
-        for (size_t i = 0; i < keys->Length(); ++i) {
+        for (std::size_t i = 0; i < keys->Length(); ++i) {
             Local<String> key = keys->Get(i)->ToString();
-            std::vector<char> keyv;
-            keyv.resize(key->Utf8Length() + 1);
-            key->WriteUtf8(&keyv[0]);
-            if (i > 0)
-                ss << "&";
-            ss << &keyv[0] << "=";
+            String::Utf8Value keyv(key);
+            if (keyv.length()) {
+                if (i > 0)
+                    ss << "&";
+                ss << *keyv << "=";
+            }
 
             Local<String> val = object->Get(key)->ToString();
-            std::vector<char> valv;
-            valv.resize(val->Utf8Length() + 1);
-            val->WriteUtf8(&valv[0]);
-            ss << &valv[0];
+            String::Utf8Value valv(val);
+            if (valv.length())
+                ss << *valv;
         }
     }
 
@@ -431,7 +519,7 @@ Session::subscribe(const Arguments& args, bool resubscribe)
     blpapi::SubscriptionList sl;
 
     Local<Object> o = args[0]->ToObject();
-    for (size_t i = 0; i < Array::Cast(*(args[0]))->Length(); ++i) {
+    for (std::size_t i = 0; i < Array::Cast(*(args[0]))->Length(); ++i) {
         Local<Value> v = o->Get(i);
         if (!v->IsObject()) {
             return ThrowException(Exception::Error(String::New(
@@ -446,9 +534,11 @@ Session::subscribe(const Arguments& args, bool resubscribe)
             return ThrowException(Exception::Error(String::New(
                         "Property 'security' must be a string.")));
         }
-        std::vector<char> secv;
-        secv.resize(iv->ToString()->Length() + 1);
-        iv->ToString()->WriteUtf8(&secv[0]);
+        String::Utf8Value secv(iv);
+        if (0 == secv.length()) {
+            return ThrowException(Exception::Error(String::New(
+                        "Property 'security' must be a string.")));
+        }
 
         // Process 'fields' array
         iv = io->Get(String::New("fields"));
@@ -478,7 +568,7 @@ Session::subscribe(const Arguments& args, bool resubscribe)
         }
         int correlation = iv->Int32Value();
 
-        sl.add(&secv[0], fields.c_str(), options.c_str(),
+        sl.add(*secv, fields.c_str(), options.c_str(),
                blpapi::CorrelationId(correlation));
     }
 
@@ -487,13 +577,11 @@ Session::subscribe(const Arguments& args, bool resubscribe)
     BLPAPI_EXCEPTION_TRY
     if (args.Length() == 2) {
         Local<String> s = args[1]->ToString();
-        std::vector<char> labelv;
-        labelv.resize(s->Length() + 1);
-        s->WriteUtf8(&labelv[0]);
+        String::Utf8Value labelv(s);
         if (resubscribe)
-            session->d_session->resubscribe(sl, &labelv[0], labelv.size());
+            session->d_session->resubscribe(sl, *labelv, labelv.length());
         else
-            session->d_session->subscribe(sl, &labelv[0], labelv.size());
+            session->d_session->subscribe(sl, *labelv, labelv.length());
     } else {
         if (resubscribe)
             session->d_session->resubscribe(sl);
@@ -574,30 +662,24 @@ Session::Request(const Arguments& args)
     BLPAPI_EXCEPTION_TRY
 
     Local<String> uri = args[0]->ToString();
-    std::vector<char> uriv;
-    uriv.resize(uri->Length() + 1);
-    uri->WriteAscii(&uriv[0]);
+    String::AsciiValue uriv(uri);
 
-    blpapi::Service service = session->d_session->getService(&uriv[0]);
+    blpapi::Service service = session->d_session->getService(*uriv);
 
     Local<String> name = args[1]->ToString();
-    std::vector<char> namev;
-    namev.resize(name->Utf8Length() + 1);
-    name->WriteUtf8(&namev[0]);
+    String::Utf8Value namev(name);
 
-    blpapi::Request request = service.createRequest(&namev[0]);
+    blpapi::Request request = service.createRequest(*namev);
 
     // Loop over object properties, appending/setting into the request.
     Local<Object> obj = args[2]->ToObject();
     Local<Array> props = obj->GetPropertyNames();
 
-    for (size_t i = 0; i < props->Length(); ++i) {
+    for (std::size_t i = 0; i < props->Length(); ++i) {
         // Process the key.
         Local<Value> keyval = props->Get(i);
         Local<String> key = keyval->ToString();
-        std::vector<char> keyv;
-        keyv.resize(key->Utf8Length() + 1);
-        key->WriteUtf8(&keyv[0]);
+        String::Utf8Value keyv(key);
 
         // Process the value.
         //
@@ -607,23 +689,21 @@ Session::Request(const Arguments& args)
         Local<Value> val = obj->Get(keyval);
         if (val->IsString()) {
             Local<String> s = val->ToString();
-            std::vector<char> valv;
-            valv.resize(s->Utf8Length() + 1);
-            s->WriteUtf8(&valv[0]);
-            request.set(&keyv[0], &valv[0]);
+            String::Utf8Value valv(s);
+            request.set(*keyv, *valv);
         } else if (val->IsBoolean()) {
-            request.set(&keyv[0], val->BooleanValue());
+            request.set(*keyv, val->BooleanValue());
         } else if (val->IsNumber()) {
-            request.set(&keyv[0], val->NumberValue());
+            request.set(*keyv, val->NumberValue());
         } else if (val->IsInt32()) {
-            request.set(&keyv[0], val->Int32Value());
+            request.set(*keyv, val->Int32Value());
         } else if (val->IsUint32()) {
-            request.set(&keyv[0],
+            request.set(*keyv,
                 static_cast<blpapi::Int64>(val->Uint32Value()));
         } else if (val->IsDate()) {
             blpapi::Datetime dt;
             mkdatetime(&dt, val);
-            request.set(&keyv[0], dt);
+            request.set(*keyv, dt);
         } else if (val->IsArray()) {
             // Arrays are marshalled into the blpapi::Request by appending
             // value types using the key of the array in the outer object.
@@ -634,23 +714,21 @@ Session::Request(const Arguments& args)
                 // Only strings, booleans, and numbers are marshalled.
                 if (subval->IsString()) {
                     Local<String> s = subval->ToString();
-                    std::vector<char> subvalv;
-                    subvalv.resize(s->Utf8Length() + 1);
-                    s->WriteUtf8(&subvalv[0]);
-                    request.append(&keyv[0], &subvalv[0]);
+                    String::Utf8Value subvalv(s);
+                    request.append(*keyv, *subvalv);
                 } else if (subval->IsBoolean()) {
-                    request.append(&keyv[0], subval->BooleanValue());
+                    request.append(*keyv, subval->BooleanValue());
                 } else if (subval->IsNumber()) {
-                    request.append(&keyv[0], subval->NumberValue());
+                    request.append(*keyv, subval->NumberValue());
                 } else if (subval->IsInt32()) {
-                    request.append(&keyv[0], subval->Int32Value());
+                    request.append(*keyv, subval->Int32Value());
                 } else if (subval->IsUint32()) {
-                    request.append(&keyv[0],
+                    request.append(*keyv,
                         static_cast<blpapi::Int64>(subval->Uint32Value()));
                 } else if (subval->IsDate()) {
                     blpapi::Datetime dt;
                     mkdatetime(&dt, subval);
-                    request.append(&keyv[0], dt);
+                    request.append(*keyv, dt);
                 } else {
                     return ThrowException(Exception::Error(String::New(
                                 "Array contains invalid value type.")));
@@ -665,13 +743,11 @@ Session::Request(const Arguments& args)
     blpapi::CorrelationId cid(cidi);
 
     if (args.Length() == 5) {
-        std::vector<char> labelv;
-        Local<String> s = args[4]->ToString();
-        labelv.resize(s->Utf8Length() + 1);
-        int len = s->WriteUtf8(&labelv[0]);
-        session->d_session->sendRequest(request, cid, 0, &labelv[0], len);
+        String::Utf8Value labelv(args[4]->ToString());
+        session->d_session->sendRequest(request, session->d_identity,
+                                        cid, 0, *labelv, labelv.length());
     } else {
-        session->d_session->sendRequest(request, cid);
+        session->d_session->sendRequest(request, session->d_identity, cid);
     }
 
     BLPAPI_EXCEPTION_CATCH_RETURN
@@ -729,7 +805,7 @@ mkutctime(struct tm* tm)
 
 #ifdef _WIN32
     char tz[128];
-    size_t len = 0;
+    std::size_t len = 0;
     getenv_s(&len, tz, sizeof(tz), "TZ");
     _putenv_s("TZ", "UTC");
     _tzset();

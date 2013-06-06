@@ -34,7 +34,7 @@ module.exports.getHostPort = function() {
     if (hp === null)
         module.exports.usage('...');
     var port = (hp[2] === undefined) ? 8194 : hp[2];
-    return { host: hp[1], port: parseInt(port) };
+    return { serverHost: hp[1], serverPort: parseInt(port) };
 };
 
 // Utility for dumping full message contents to the console.
