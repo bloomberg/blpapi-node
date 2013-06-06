@@ -4,7 +4,9 @@ var c = require('./Console.js');
 var blpapi = require('blpapi');
 
 var hp = c.getHostPort();
-var session = new blpapi.Session({ host: hp.host, port: hp.port });
+// Add 'authenticationOptions' key to session options if necessary.
+var session = new blpapi.Session({ serverHost: hp.serverHost,
+                                   serverPort: hp.serverPort });
 var service_mktbar = 1; // Unique identifier for mktbar service
 
 var seclist = ['//blp/mktbar/ticker/AAPL US Equity',

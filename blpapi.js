@@ -18,6 +18,10 @@ exports.Session.prototype.start =
     function() {
         return this.session.start();
     }
+exports.Session.prototype.authorize =
+    function(uri, cid) {
+        return this.session.authorize(uri, cid);
+    }
 exports.Session.prototype.stop =
     function() {
         return this.session.stop();

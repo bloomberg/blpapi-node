@@ -4,7 +4,9 @@ var c = require('./Console.js');
 var blpapi = require('blpapi');
 
 var hp = c.getHostPort();
-var session = new blpapi.Session({ host: hp.host, port: hp.port });
+// Add 'authenticationOptions' key to session options if necessary.
+var session = new blpapi.Session({ serverHost: hp.serverHost,
+                                   serverPort: hp.serverPort });
 var service_mktvwap = 1; // Unique identifier for mktvwap service
 
 var seclist = ['//blp/mktvwap/ticker/AAPL US Equity',
