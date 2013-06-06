@@ -4,7 +4,9 @@ var c = require('./Console.js');
 var blpapi = require('blpapi');
 
 var hp = c.getHostPort();
-var session = new blpapi.Session({ host: hp.host, port: hp.port });
+// Add 'authenticationOptions' key to session options if necessary.
+var session = new blpapi.Session({ serverHost: hp.serverHost,
+                                   serverPort: hp.serverPort });
 var service_mktdata = 1; // Unique identifier for mktdata service
 
 var seclist = ['AAPL US Equity', 'VOD LN Equity'];
