@@ -71,13 +71,15 @@ namespace blpapijs {
 class Session : public ObjectWrap,
                 public blpapi::EventHandler {
 public:
-    Session(const char *host, int port);
+    Session(const std::string& serverHost, int serverPort,
+            const std::string& authenticationOptions);
     ~Session();
 
     static void Initialize(Handle<Object> target);
     static Handle<Value> New(const Arguments& args);
 
     static Handle<Value> Start(const Arguments& args);
+    static Handle<Value> Authorize(const Arguments& args);
     static Handle<Value> Stop(const Arguments& args);
     static Handle<Value> Destroy(const Arguments& args);
     static Handle<Value> OpenService(const Arguments& args);
@@ -116,6 +118,7 @@ private:
 
     blpapi::SessionOptions d_options;
     blpapi::Session *d_session;
+    blpapi::Identity d_identity;
     Persistent<Object> d_session_ref;
     std::deque<blpapi::Event> d_que;
     uv_mutex_t d_que_mutex;
@@ -133,12 +136,15 @@ Persistent<String> Session::s_value;
 Persistent<String> Session::s_class_id;
 Persistent<String> Session::s_data;
 
-Session::Session(const char *host, int port)
+Session::Session(const std::string& serverHost, int serverPort,
+                 const std::string& authenticationOptions)
     : d_started(false)
     , d_stopped(false)
 {
-    d_options.setServerHost(host);
-    d_options.setServerPort(port);
+    d_options.setServerHost(serverHost.c_str());
+    d_options.setServerPort(serverPort);
+    if (authenticationOptions.length())
+        d_options.setAuthenticationOptions(authenticationOptions.c_str());
 
     BLPAPI_EXCEPTION_TRY
     d_session = new blpapi::Session(d_options, this);
@@ -169,6 +175,7 @@ Session::Initialize(Handle<Object> target)
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
     NODE_SET_PROTOTYPE_METHOD(t, "start", Start);
+    NODE_SET_PROTOTYPE_METHOD(t, "authorize", Authorize);
     NODE_SET_PROTOTYPE_METHOD(t, "stop", Stop);
     NODE_SET_PROTOTYPE_METHOD(t, "destroy", Destroy);
     NODE_SET_PROTOTYPE_METHOD(t, "openService", OpenService);
@@ -198,35 +205,50 @@ Session::New(const Arguments& args)
 {
     HandleScope scope;
 
-    char host[128] = "";
-    int port = 0;
+    std::string serverHost;
+    int serverPort = 0;
+    std::string authenticationOptions;
 
     if (args.Length() > 0 && args[0]->IsObject()) {
         Local<Object> o = args[0]->ToObject();
 
         // Capture the host name
         Local<Value> h = o->Get(String::New("host"));
-        if (h->IsString()) {
-            h->ToString()->WriteAscii(host, 0, sizeof(host));
-            host[sizeof(host)-1] = '\0';
+        if (h->IsUndefined())
+            h = o->Get(String::New("serverHost"));
+        if (!h->IsUndefined()) {
+            String::AsciiValue hv(h);
+            if (hv.length())
+                serverHost.assign(*hv, hv.length());
         }
-        if (0 == host[0])
+        if (0 == serverHost.length())
             return ThrowException(Exception::Error(String::New(
-                        "Configuration missing 'host'.")));
+                        "Configuration missing 'serverHost'.")));
 
         // Capture the port number
         Local<Value> p = o->Get(String::New("port"));
+        if (p->IsUndefined())
+            p = o->Get(String::New("serverPort"));
         if (p->IsInt32())
-            port = p->ToInt32()->Value();
-        if (0 == port)
+            serverPort = p->ToInt32()->Value();
+        if (0 == serverPort)
             return ThrowException(Exception::Error(String::New(
-                        "Configuration missing non-zero 'port'.")));
+                        "Configuration missing non-zero 'serverPort'.")));
+
+        // Capture optional authentication options
+        Local<Value> ao = o->Get(String::New("authenticationOptions"));
+        if (!ao->IsUndefined()) {
+            String::AsciiValue aov(ao);
+            if (aov.length())
+                authenticationOptions.assign(*aov, aov.length());
+        }
     } else {
         return ThrowException(Exception::Error(String::New(
                         "Configuration object must be passed as parameter.")));
     }
 
-    Session *session = new Session(host, port);
+    Session *session = new Session(serverHost, serverPort,
+                                   authenticationOptions);
     session->Wrap(args.This());
     return scope.Close(args.This());
 }
@@ -253,6 +275,76 @@ Session::Start(const Arguments& args)
     session->d_started = true;
 
     return scope.Close(args.This());
+}
+
+Handle<Value>
+Session::Authorize(const Arguments& args)
+{
+    HandleScope scope;
+
+    if (args.Length() < 1 || !args[0]->IsString()) {
+        return ThrowException(Exception::Error(String::New(
+                "Service URI string must be provided as first parameter.")));
+    }
+    if (args.Length() < 2 || !args[1]->IsInt32()) {
+        return ThrowException(Exception::Error(String::New(
+                "Integer correlation identifier must be provided "
+                "as second parameter.")));
+    }
+    if (args.Length() > 2) {
+        return ThrowException(Exception::Error(String::New(
+                "Function expects at most two arguments.")));
+    }
+
+    Local<String> s = args[0]->ToString();
+    String::Utf8Value uriv(s);
+
+    int cidi = args[1]->Int32Value();
+
+    Session* session = ObjectWrap::Unwrap<Session>(args.This());
+
+    BLPAPI_EXCEPTION_TRY
+
+    blpapi::EventQueue tokenEventQueue;
+    blpapi::CorrelationId tokenCid(static_cast<void*>(&tokenEventQueue));
+    session->d_session->generateToken(tokenCid, &tokenEventQueue);
+
+    std::string token;
+    blpapi::Event ev = tokenEventQueue.nextEvent();
+    if (blpapi::Event::TOKEN_STATUS == ev.eventType() ||
+        blpapi::Event::REQUEST_STATUS == ev.eventType()) {
+        blpapi::MessageIterator msgIter(ev);
+        while (msgIter.next()) {
+            blpapi::Message msg = msgIter.message();
+            if ("TokenGenerationSuccess" == msg.messageType()) {
+                token = msg.getElementAsString("token");
+            } else {
+                std::stringstream ss;
+                ss << "Failed to generate token: " << msg.getElement("reason");
+                std::string s = ss.str();
+                return ThrowException(Exception::Error(String::New(
+                        s.c_str())));
+            }
+        }
+    }
+    if (0 == token.length()) {
+        return ThrowException(Exception::Error(String::New(
+                        "Failed to get token.")));
+    }
+
+    blpapi::Service authService = session->d_session->getService(*uriv);
+    blpapi::Request authRequest = authService.createAuthorizationRequest();
+    authRequest.set("token", token.c_str());
+
+    session->d_identity = session->d_session->createIdentity();
+
+    blpapi::CorrelationId cid(cidi);
+    session->d_session->sendAuthorizationRequest(authRequest,
+                                                 &session->d_identity, cid);
+
+    BLPAPI_EXCEPTION_CATCH_RETURN
+
+    return scope.Close(Integer::New(cidi));
 }
 
 Handle<Value>
@@ -669,9 +761,10 @@ Session::Request(const Arguments& args)
         Local<String> s = args[4]->ToString();
         labelv.resize(s->Utf8Length() + 1);
         int len = s->WriteUtf8(&labelv[0]);
-        session->d_session->sendRequest(request, cid, 0, &labelv[0], len);
+        session->d_session->sendRequest(request, session->d_identity,
+                                        cid, 0, &labelv[0], len);
     } else {
-        session->d_session->sendRequest(request, cid);
+        session->d_session->sendRequest(request, session->d_identity, cid);
     }
 
     BLPAPI_EXCEPTION_CATCH_RETURN
