@@ -270,7 +270,12 @@ Session::Start(const Arguments& args)
     session->d_session->startAsync();
     BLPAPI_EXCEPTION_CATCH_RETURN
 
-    session->d_session_ref = Persistent<Object>::New(args.This());
+    session->d_session_ref =
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+        Persistent<Object>::New(Isolate::GetCurrent(), args.This());
+#else
+        Persistent<Object>::New(args.This());
+#endif
     session->d_started = true;
 
     return scope.Close(args.This());
