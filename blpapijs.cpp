@@ -84,6 +84,7 @@ public:
     static Handle<Value> OpenService(const Arguments& args);
     static Handle<Value> Subscribe(const Arguments& args);
     static Handle<Value> Resubscribe(const Arguments& args);
+    static Handle<Value> Unsubscribe(const Arguments& args);
     static Handle<Value> Request(const Arguments& args);
 
 private:
@@ -91,7 +92,7 @@ private:
     Session(const Session&);
     Session& operator=(const Session&);
 
-    static Handle<Value> subscribe(const Arguments& args, bool resubscribe);
+    static Handle<Value> subscribe(const Arguments& args, int action);
     static void formFields(std::string* str, Handle<Object> array);
     static void formOptions(std::string* str, Handle<Value> array);
     static Handle<Value> elementToValue(const blpapi::Element& e);
@@ -180,6 +181,7 @@ Session::Initialize(Handle<Object> target)
     NODE_SET_PROTOTYPE_METHOD(t, "openService", OpenService);
     NODE_SET_PROTOTYPE_METHOD(t, "subscribe", Subscribe);
     NODE_SET_PROTOTYPE_METHOD(t, "resubscribe", Resubscribe);
+    NODE_SET_PROTOTYPE_METHOD(t, "unsubscribe", Unsubscribe);
     NODE_SET_PROTOTYPE_METHOD(t, "request", Request);
 
     target->Set(String::NewSymbol("Session"), t->GetFunction());
@@ -504,7 +506,7 @@ Session::formOptions(std::string* str, Handle<Value> value)
 }
 
 Handle<Value>
-Session::subscribe(const Arguments& args, bool resubscribe)
+Session::subscribe(const Arguments& args, int action)
 {
     HandleScope scope;
 
@@ -583,13 +585,17 @@ Session::subscribe(const Arguments& args, bool resubscribe)
     if (args.Length() == 2) {
         Local<String> s = args[1]->ToString();
         String::Utf8Value labelv(s);
-        if (resubscribe)
+        if (action == 1)
             session->d_session->resubscribe(sl, *labelv, labelv.length());
+		else if (action == 2)
+            session->d_session->unsubscribe(sl, *labelv, labelv.length());
         else
             session->d_session->subscribe(sl, *labelv, labelv.length());
     } else {
-        if (resubscribe)
+        if (action == 1)
             session->d_session->resubscribe(sl);
+		else if (action == 2)
+            session->d_session->unsubscribe(sl);
         else
             session->d_session->subscribe(sl);
     }
@@ -601,13 +607,19 @@ Session::subscribe(const Arguments& args, bool resubscribe)
 Handle<Value>
 Session::Subscribe(const Arguments& args)
 {
-    return Session::subscribe(args, false);
+    return Session::subscribe(args, 0);
 }
 
 Handle<Value>
 Session::Resubscribe(const Arguments& args)
 {
-    return Session::subscribe(args, true);
+    return Session::subscribe(args, 1);
+}
+
+Handle<Value>
+Session::Unsubscribe(const Arguments& args)
+{
+    return Session::subscribe(args, 2);
 }
 
 static inline void

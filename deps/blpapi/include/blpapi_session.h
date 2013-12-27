@@ -528,6 +528,11 @@ class Session : public AbstractSession {
         // it is preferable not to aggressively re-use correlation
         // IDs, particularly with an asynchronous Session.
 
+	void unsubscribe(
+			const SubscriptionList& subscriptionList,
+			const char *requestLabel,
+			int requestLabelLen);
+
     void resubscribe(const SubscriptionList& subscriptions);
         // Modify each subscription in the specified
         // 'subscriptionList' to reflect the modified options
@@ -891,6 +896,17 @@ void Session::unsubscribe(const SubscriptionList& list)
 {
     ExceptionUtil::throwOnError(
         blpapi_Session_unsubscribe(d_handle_p, list.impl(), 0, 0)
+    );
+}
+
+inline
+void Session::unsubscribe(const SubscriptionList& list,
+                          const char *requestLabel,
+                          int requestLabelLen)
+{
+    ExceptionUtil::throwOnError(
+        blpapi_Session_unsubscribe(d_handle_p, list.impl(),
+            requestLabel, requestLabelLen)
     );
 }
 

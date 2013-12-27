@@ -42,6 +42,10 @@ exports.Session.prototype.resubscribe =
     function(sub, label) {
         return this.session.resubscribe(sub, label);
     }
+exports.Session.prototype.unsubscribe =
+    function(sub, label) {
+        return this.session.unsubscribe(sub, label);
+    }
 exports.Session.prototype.request =
     function(uri, name, request, cid, label) {
         return this.session.request(uri, name, request, cid, label);
