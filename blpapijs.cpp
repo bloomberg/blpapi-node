@@ -587,14 +587,14 @@ Session::subscribe(const Arguments& args, int action)
         String::Utf8Value labelv(s);
         if (action == 1)
             session->d_session->resubscribe(sl, *labelv, labelv.length());
-		else if (action == 2)
+	else if (action == 2)
             session->d_session->unsubscribe(sl, *labelv, labelv.length());
         else
             session->d_session->subscribe(sl, *labelv, labelv.length());
     } else {
         if (action == 1)
             session->d_session->resubscribe(sl);
-		else if (action == 2)
+	else if (action == 2)
             session->d_session->unsubscribe(sl);
         else
             session->d_session->subscribe(sl);

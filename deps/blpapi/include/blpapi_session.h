@@ -528,10 +528,32 @@ class Session : public AbstractSession {
         // it is preferable not to aggressively re-use correlation
         // IDs, particularly with an asynchronous Session.
 
-	void unsubscribe(
-			const SubscriptionList& subscriptionList,
-			const char *requestLabel,
-			int requestLabelLen);
+    void unsubscribe(
+            const SubscriptionList& subscriptionList,
+            const char *requestLabel,
+            int requestLabelLen);
+        // Cancel each of the current subscriptions identified by the
+        // specified 'subscriptionList'. If the correlation ID of any
+        // entry in the 'subscriptionList' does not identify a current
+        // subscription then that entry is ignored. All entries which
+        // have valid correlation IDs will be cancelled.
+        // The specified 'requestLabel' and
+        // 'requestLabelLen' define a string which
+        // will be recorded along with any diagnostics for this
+        // operation. There must be at least 'requestLabelLen'
+        // printable characters at the location 'requestLabel'.
+        //
+        // Message obtained from a MessageIterator by calling
+        // next(). However, any Message currently pointed to by a
+        // MessageIterator when unsubscribe() is called is not
+        // affected even if it has one of the correlation IDs in the
+        // 'subscriptionList'. Also any Message where a reference has
+        // been retained by the application may still contain a
+        // correlation ID from the 'subscriptionList'. For these
+        // reasons, although technically an application is free to
+        // re-use the correlation IDs as soon as this method returns
+        // it is preferable not to aggressively re-use correlation
+        // IDs, particularly with an asynchronous Session.
 
     void resubscribe(const SubscriptionList& subscriptions);
         // Modify each subscription in the specified
