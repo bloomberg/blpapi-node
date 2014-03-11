@@ -32,6 +32,7 @@
 //      blpapi::InvalidConversionException: Invalid conversion exception
 //        blpapi::IndexOutOfRangeException: Index out of range exception
 //          blpapi::FieldNotFoundException: Field not found exception
+//               blpapi::NotFoundException: Not present exception
 //           blpapi::UnknownErrorException: Unknown error exception
 //   blpapi::UnsupportedOperationException: Unsupported operation exception
 //                   blpapi::ExceptionUtil: Internal exception generating class
@@ -65,6 +66,11 @@ int blpapi_getErrorInfo(blpapi_ErrorInfo_t *buffer, int errorCode);
 } // extern "C"
 
 
+#ifndef INCLUDED_EXCEPTION
+#include <exception>
+#define INCLUDED_EXCEPTION
+#endif
+
 #ifndef INCLUDED_STRING
 #include <string>
 #define INCLUDED_STRING
@@ -72,122 +78,337 @@ int blpapi_getErrorInfo(blpapi_ErrorInfo_t *buffer, int errorCode);
 
 namespace BloombergLP {
 namespace blpapi {
+                            // ===============
+                            // class Exception
+                            // ===============
 
-class Exception {
-    std::string d_description;
+class Exception : public std::exception {
+    // This class defines a base exception for blpapi operations.  Objects of
+    // this class contain the error description for the exception.
+
+    // DATA
+    const std::string d_description;
 
   public:
-    Exception(const std::string description)
-        : d_description(description)
-    {
-    }
+    // CREATORS
+    explicit Exception(const std::string& description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 
-    const std::string& description() const
-    {
-        return d_description;
-    }
+    // ACCESSORS
+    const std::string& description() const throw();
+        // Return the error description supplied at construction.
+
+    virtual const char* what() const throw();
+        // Return the error description supplied at construction as a
+        // null-terminated character sequence.
+
+    virtual ~Exception() throw();
+        // Destroy this object.
 };
+                   // =====================================
+                   // class DuplicateCorrelationIdException
+                   // =====================================
 
 class DuplicateCorrelationIdException : public Exception {
+    // The class defines an exception for non unqiue 'blpapi::CorrelationId'.
   public:
-    DuplicateCorrelationIdException(const std::string &description)
-        : Exception(description)
-    {
-    }
+    // CREATORS
+    explicit DuplicateCorrelationIdException(const std::string &description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 };
+
+                        // ===========================
+                        // class InvalidStateException
+                        // ===========================
 
 class InvalidStateException: public Exception {
+    // This class defines an exception for calling methods on an object that is
+    // not in a valid state.
   public:
-    InvalidStateException(const std::string &description)
-        : Exception(description)
-    {
-    }
+    // CREATORS
+    explicit InvalidStateException(const std::string &description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 };
+
+                       // ==============================
+                       // class InvalidArgumentException
+                       // ==============================
 
 class InvalidArgumentException: public Exception {
+    // This class defines an exception for invalid arguments on method
+    // invocations.
   public:
-    InvalidArgumentException(const std::string &description)
-        : Exception(description)
-    {
-    }
+    // CREATORS
+    explicit InvalidArgumentException(const std::string& description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 };
+
+                      // ================================
+                      // class InvalidConversionException
+                      // ================================
 
 class InvalidConversionException: public Exception {
+    // This class defines an exception for invalid conversion of data.
   public:
-    InvalidConversionException(const std::string &description)
-        : Exception(description)
-    {
-    }
+    // CREATORS
+    explicit InvalidConversionException(const std::string& description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 };
+
+                       // ==============================
+                       // class IndexOutOfRangeException
+                       // ==============================
 
 class IndexOutOfRangeException: public Exception {
+    // This class defines an exception to capture the error when an invalid
+    // index is used for an operation that needs index.
   public:
-    IndexOutOfRangeException(const std::string& description)
-        : Exception(description)
-    {
-    }
+    // CREATORS
+    explicit IndexOutOfRangeException(const std::string& description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 };
+
+                        // ============================
+                        // class FieldNotFoundException
+                        // ============================
 
 class FieldNotFoundException: public Exception {
+    // This class defines an exception to capture the error when an invalid
+    // field is used for operation.
+    // DEPRECATED
   public:
-    FieldNotFoundException(const std::string& description)
-        : Exception(description)
-    {
-    }
+    // CREATORS
+    explicit FieldNotFoundException(const std::string& description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 };
+
+                        // ===========================
+                        // class UnknownErrorException
+                        // ===========================
 
 class UnknownErrorException: public Exception {
+    // This class defines an exception for errors that do not fall in any
+    // predefined category.
   public:
-    UnknownErrorException(const std::string& description)
-        : Exception(description)
-    {
-    }
+    // CREATORS
+    explicit UnknownErrorException(const std::string& description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 };
+
+                    // ===================================
+                    // class UnsupportedOperationException
+                    // ===================================
 
 class UnsupportedOperationException: public Exception {
+    // This class defines an exception for unsupported operations.
   public:
-    UnsupportedOperationException(const std::string& description)
-        : Exception(description)
-    {
-    }
+    // CREATORS
+    explicit UnsupportedOperationException(const std::string& description);
+        // Create an exception object initialized with the specified
+        // 'description'.
 };
 
+                          // =======================
+                          // class NotFoundException
+                          // =======================
+
+class NotFoundException: public Exception {
+    // This class defines an exception to capture the error when an item is
+    // not found for an operation.
+  public:
+    // CREATORS
+    explicit NotFoundException(const std::string& description);
+        // Create an exception object initialized with the specified
+        // 'description'.
+};
+
+                            // ===================
+                            // class ExceptionUtil
+                            // ===================
 
 class ExceptionUtil {
+    // This class provides a namespace for utility functions that convert
+    // C-style error codes to 'blpapi::Exception' objects.
+
   private:
-    static void throwException(int errorCode)
-    {
-        const char* description = blpapi_getLastErrorDescription(errorCode);
-        if (!description) {
-            description = "Unknown";
-        }
-
-        if (BLPAPI_ERROR_DUPLICATE_CORRELATIONID == errorCode) {
-            throw DuplicateCorrelationIdException(description);
-        }
-
-        switch (BLPAPI_RESULTCLASS(errorCode))
-          case BLPAPI_INVALIDSTATE_CLASS: {
-            throw InvalidStateException(description);
-          case BLPAPI_INVALIDARG_CLASS:
-            throw InvalidArgumentException(description);
-          case BLPAPI_CNVERROR_CLASS:
-            throw InvalidConversionException(description);
-          case BLPAPI_BOUNDSERROR_CLASS:
-            throw IndexOutOfRangeException(description);
-          case BLPAPI_FLDNOTFOUND_CLASS:
-            throw FieldNotFoundException(description);
-          case BLPAPI_UNSUPPORTED_CLASS:
-            throw UnsupportedOperationException(description);
-          default:
-            throw Exception(description);
-        }
-    }
+    static void throwException(int errorCode);
+        // Throw the appropriate exception for the specified 'errorCode'.
 
   public:
     static void throwOnError(int errorCode);
+        // Throw the appropriate exception for the specified 'errorCode' if the
+        // errorCode is not 0.
 };
 
+// ============================================================================
+//                        INLINE FUNCTION DEFINITIONS
+// ============================================================================
+
+                              // ---------------
+                              // class Exception
+                              // ---------------
+
+inline
+Exception::Exception(const std::string& description)
+: d_description(description)
+{
+}
+
+inline
+Exception::~Exception() throw()
+{
+}
+
+inline
+const std::string& Exception::description() const throw()
+{
+    return d_description;
+}
+
+inline
+const char* Exception::what() const throw()
+{
+    return description().c_str();
+}
+
+                   // -------------------------------------
+                   // class DuplicateCorrelationIdException
+                   // -------------------------------------
+
+inline
+DuplicateCorrelationIdException::DuplicateCorrelationIdException(
+                                                const std::string& description)
+: Exception(description)
+{
+}
+
+                        // ---------------------------
+                        // class InvalidStateException
+                        // ---------------------------
+
+inline
+InvalidStateException::InvalidStateException(const std::string& description)
+: Exception(description)
+{
+}
+
+                       // ------------------------------
+                       // class InvalidArgumentException
+                       // ------------------------------
+
+inline
+InvalidArgumentException::InvalidArgumentException(
+                                                const std::string& description)
+: Exception(description)
+{
+}
+
+                      // --------------------------------
+                      // class InvalidConversionException
+                      // --------------------------------
+
+inline
+InvalidConversionException::InvalidConversionException(
+                                                const std::string& description)
+: Exception(description)
+{
+}
+
+                       // ------------------------------
+                       // class IndexOutOfRangeException
+                       // ------------------------------
+
+inline
+IndexOutOfRangeException::IndexOutOfRangeException(
+                                                const std::string& description)
+: Exception(description)
+{
+}
+
+                        // ----------------------------
+                        // class FieldNotFoundException
+                        // ----------------------------
+
+inline
+FieldNotFoundException::FieldNotFoundException(const std::string& description)
+: Exception(description)
+{
+}
+
+                        // ---------------------------
+                        // class UnknownErrorException
+                        // ---------------------------
+
+inline
+UnknownErrorException::UnknownErrorException(const std::string& description)
+: Exception(description)
+{
+}
+
+                    // -----------------------------------
+                    // class UnsupportedOperationException
+                    // -----------------------------------
+
+inline
+UnsupportedOperationException::UnsupportedOperationException(
+                                                const std::string& description)
+: Exception(description)
+{
+}
+
+                          // -----------------------
+                          // class NotFoundException
+                          // -----------------------
+
+inline
+NotFoundException::NotFoundException(const std::string& description)
+: Exception (description)
+{
+}
+
+                            // -------------------
+                            // class ExceptionUtil
+                            // -------------------
+
+inline
+void ExceptionUtil::throwException(int errorCode)
+{
+    const char* description = blpapi_getLastErrorDescription(errorCode);
+    if (!description) {
+        description = "Unknown";
+    }
+
+    if (BLPAPI_ERROR_DUPLICATE_CORRELATIONID == errorCode) {
+        throw DuplicateCorrelationIdException(description);
+    }
+
+    switch (BLPAPI_RESULTCLASS(errorCode))
+      case BLPAPI_INVALIDSTATE_CLASS: {
+        throw InvalidStateException(description);
+      case BLPAPI_INVALIDARG_CLASS:
+        throw InvalidArgumentException(description);
+      case BLPAPI_CNVERROR_CLASS:
+        throw InvalidConversionException(description);
+      case BLPAPI_BOUNDSERROR_CLASS:
+        throw IndexOutOfRangeException(description);
+      case BLPAPI_FLDNOTFOUND_CLASS:
+        throw FieldNotFoundException(description);
+      case BLPAPI_UNSUPPORTED_CLASS:
+        throw UnsupportedOperationException(description);
+      case BLPAPI_NOTFOUND_CLASS:
+        throw NotFoundException(description);
+      default:
+        throw Exception(description);
+    }
+}
 
 inline
 void ExceptionUtil::throwOnError(int errorCode)

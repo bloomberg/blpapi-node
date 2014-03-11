@@ -1416,6 +1416,7 @@ Datetime::Datetime(unsigned year,
                    unsigned minutes,
                    unsigned seconds)
 {
+    d_value.datetime.offset = 0;
     d_value.datetime.year = year;
     d_value.datetime.month = month;
     d_value.datetime.day = day;
@@ -1436,6 +1437,7 @@ Datetime::Datetime(unsigned year,
                    unsigned seconds,
                    unsigned milliSeconds)
 {
+    d_value.datetime.offset = 0;
     d_value.datetime.year = year;
     d_value.datetime.month = month;
     d_value.datetime.day = day;
@@ -1457,6 +1459,7 @@ Datetime::Datetime(unsigned     year,
                    unsigned     seconds,
                    Milliseconds fractionOfSecond)
 {
+    d_value.datetime.offset = 0;
     d_value.datetime.year = year;
     d_value.datetime.month = month;
     d_value.datetime.day = day;
@@ -1478,6 +1481,7 @@ Datetime::Datetime(unsigned     year,
                    unsigned     seconds,
                    Microseconds fractionOfSecond)
 {
+    d_value.datetime.offset = 0;
     d_value.datetime.year = year;
     d_value.datetime.month = month;
     d_value.datetime.day = day;
@@ -1499,6 +1503,7 @@ Datetime::Datetime(unsigned    year,
                    unsigned    seconds,
                    Nanoseconds fractionOfSecond)
 {
+    d_value.datetime.offset = 0;
     d_value.datetime.year = year;
     d_value.datetime.month = month;
     d_value.datetime.day = day;
@@ -1520,14 +1525,15 @@ Datetime::Datetime(unsigned    year,
                    unsigned    seconds,
                    Picoseconds fractionOfSecond)
 {
+    d_value.datetime.offset = 0;
     d_value.datetime.year = year;
     d_value.datetime.month = month;
     d_value.datetime.day = day;
     d_value.datetime.hours = hours;
     d_value.datetime.minutes = minutes;
     d_value.datetime.seconds = seconds;
-    d_value.datetime.milliSeconds
-        = fractionOfSecond.d_psec / 1000 / 1000 / 1000;
+    d_value.datetime.milliSeconds = static_cast<blpapi_UInt16_t>(
+                                 fractionOfSecond.d_psec / 1000 / 1000 / 1000);
     d_value.picoseconds = fractionOfSecond.d_psec % (1000 * 1000 * 1000);
     d_value.datetime.parts
         = DatetimeParts::DATE | DatetimeParts::TIMEFRACSECONDS;

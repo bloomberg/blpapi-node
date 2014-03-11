@@ -129,7 +129,7 @@ class Message {
     Element           d_elements;
     bool              d_isCloned;
 
-  public: 
+  public:
     enum Fragment {
         // A message could be split into more than one fragments to reduce
         // each message size. This enum is used to indicate whether a message

@@ -310,7 +310,7 @@ class Constant {
 };
 
                              // ==================
-                             // class ConstantList 
+                             // class ConstantList
                              // ==================
 class ConstantList {
     // Represents a list schema enumeration constants.

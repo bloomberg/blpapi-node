@@ -22,7 +22,7 @@ This module requires:
 
 This module includes:
 
-+ [Bloomberg BLPAPI C++ SDK] v3.6.3.1 (Linux/Windows), v3.6.2.1 (Mac OS X)
++ [Bloomberg BLPAPI C++ SDK] v3.7.5.1 (Linux/Windows/Mac OS X)
 
 [Bloomberg BLPAPI C++ SDK]: http://openbloomberg.com/open-api
 [B-PIPE]: http://www.bloomberg.com/enterprise/enterprise_products/data_optimization/data_feeds
