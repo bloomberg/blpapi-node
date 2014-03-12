@@ -32,9 +32,65 @@
 // AbstractSession functionality, ProviderSession provides functions that are
 // needed to support publishing like 'registerService', 'createTopics' and
 // 'publish'.
+//
+// Topic Life Cycle
+// ----------------
+// A provider wishing to publish subscription data must explicitly open each
+// topic on which they publish using 'ProviderSession::createTopics' (or 
+// 'ProviderSession::createTopicsAsync'). Creating a topic prepares the
+// distribution and caching infrastructure for new data associated with the
+// topic's resolved identifier. (Note that several different topics could
+// resolve to the same ID.) Independent of a topic's creation status is its
+// subscription status, i.e. whether there are subscribers ready to receive
+// the data published. A topic that is both created and subscribed is
+// *activated*.
+//
+// There are two models for managing topic creation: broadcast and
+// interactive. Broadcast publishers proactively call
+// 'ProviderSession::createTopic*' for each topic on which they intend to
+// publish, while interactive publishers wait to receive a
+// 'TopicSubscribed' message (within an 'Event' of type 'Event::TOPIC_STATUS')
+// before calling 'ProviderSession::createTopic*' in response. Topics are
+// resolved before they are created---it is possible that multiple different
+// topic strings will map to the same underlying topic. See below for the
+// behavior of the SDK when the same topic is created multiple times.
+//
+// After 'ProviderSession::createTopic*' is called, the publisher will receive
+// a 'TopicCreated' message (within an 'Event::TOPIC_STATUS' event), and when
+// there is at least one subscriber to the topic the publisher will then
+// receive a 'TopicActivated' message (also within an 'Event::TOPIC_STATUS'
+// event). As subscribers come and go, additional 'TopicSubscribed',
+// 'TopicActivated', 'TopicUnsubscribed', and 'TopicDeactivated' messages may
+// be received by the publisher. A 'Topic' object can be retrieved from each of
+// these messages using the 'ProviderSession::getTopic' method, and this
+// object can be used for subsequent calls to 'EventFormatter::appendMessage'
+// and 'ProviderSession::deleteTopic'. In the case that the same resolved
+// topic is created multiple times by a publisher using different names, it is
+// unspecified which of those names will be returned by 'Message::topicName'
+// for these (or other) messages.
+//
+// If a publisher no longer intends to publish data on a topic, it can call
+// 'ProviderSession::deleteTopic*' to free the internal caching and
+// distribution resources associated with the topic. When a resolved topic has
+// been deleted the same number of times that it has been created,
+// a 'TopicDeleted' message will be delivered, preceded by 'TopicUnsubscribed'
+// and 'TopicDeactivated' messages if the topic was still subscribed (and
+// activated). No further messages can be published on a deleted topic.
+//
+// Deregistering a service deletes all topics associated with that service.
+//
+// Note that 'TopicActivated' and 'TopicDeactivated' messages are entirely
+// redundant with 'TopicCreated', 'TopicSubscribed', 'TopicDeleted', and
+// 'TopicUnsubscribed' messages, and are provided only for the convenience
+// of publishers that do not maintain per-topic state.
+
 
 #ifndef INCLUDED_BLPAPI_ABSTRACTSESSION
 #include <blpapi_abstractsession.h>
+#endif
+
+#ifndef INCLUDED_BLPAPI_CALL
+#include <blpapi_call.h>
 #endif
 
 #ifndef INCLUDED_BLPAPI_CORRELATIONID
@@ -102,15 +158,15 @@ typedef void(*blpapi_ProviderEventHandler_t)(blpapi_Event_t   *event,
                                      void                     *userData);
 
 BLPAPI_EXPORT
-blpapi_ProviderSession_t* blpapi_ProviderSession_create(
+blpapi_ProviderSession_t *blpapi_ProviderSession_create(
         blpapi_SessionOptions_t *parameters,
         blpapi_ProviderEventHandler_t handler,
-        blpapi_EventDispatcher_t* dispatcher,
+        blpapi_EventDispatcher_t *dispatcher,
         void *userData);
 
 BLPAPI_EXPORT
 void blpapi_ProviderSession_destroy(
-    blpapi_ProviderSession_t* session);
+    blpapi_ProviderSession_t *session);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_start(
@@ -122,98 +178,125 @@ int blpapi_ProviderSession_startAsync(
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_stop(
-    blpapi_ProviderSession_t* session);
+    blpapi_ProviderSession_t *session);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_stopAsync(
-    blpapi_ProviderSession_t* session);
+    blpapi_ProviderSession_t *session);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_nextEvent(
-    blpapi_ProviderSession_t* session,
+    blpapi_ProviderSession_t *session,
     blpapi_Event_t **eventPointer,
     unsigned int timeoutInMilliseconds);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_tryNextEvent(
-    blpapi_ProviderSession_t* session,
+    blpapi_ProviderSession_t *session,
     blpapi_Event_t **eventPointer);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_registerService(
         blpapi_ProviderSession_t *session,
-        const char* serviceName,
-        blpapi_Identity_t const* identity,
+        const char *serviceName,
+        const blpapi_Identity_t *identity,
         blpapi_ServiceRegistrationOptions_t *registrationOptions);
+
+BLPAPI_EXPORT
+int blpapi_ProviderSession_activateSubServiceCodeRange(
+        blpapi_ProviderSession_t *session,
+        const char* serviceName,
+        int begin,
+        int end,
+        int priority);
+
+BLPAPI_EXPORT
+int blpapi_ProviderSession_deactivateSubServiceCodeRange(
+        blpapi_ProviderSession_t *session,
+        const char* serviceName,
+        int begin,
+        int end);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_registerServiceAsync(
         blpapi_ProviderSession_t *session,
-        const char* serviceName,
-        blpapi_Identity_t const* identity,
+        const char *serviceName,
+        const blpapi_Identity_t *identity,
         blpapi_CorrelationId_t *correlationId,
         blpapi_ServiceRegistrationOptions_t *registrationOptions);
 
 BLPAPI_EXPORT
+int blpapi_ProviderSession_deregisterService(
+        blpapi_ProviderSession_t *session,
+        const char *serviceName);
+
+BLPAPI_EXPORT
 int blpapi_ProviderSession_resolve(
-    blpapi_ProviderSession_t* session,
-    blpapi_ResolutionList_t* resolutionList,
+    blpapi_ProviderSession_t *session,
+    blpapi_ResolutionList_t *resolutionList,
     int resolveMode,
-    blpapi_Identity_t const* identity);
+    const blpapi_Identity_t *identity);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_resolveAsync(
-    blpapi_ProviderSession_t* session,
-    const blpapi_ResolutionList_t* resolutionList,
+    blpapi_ProviderSession_t *session,
+    const blpapi_ResolutionList_t *resolutionList,
     int resolveMode,
-    blpapi_Identity_t const* identity);
+    const blpapi_Identity_t *identity);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_createTopics(
-    blpapi_ProviderSession_t* session,
-    blpapi_TopicList_t* topicList,
+    blpapi_ProviderSession_t *session,
+    blpapi_TopicList_t *topicList,
     int resolveMode,
-    blpapi_Identity_t const* identity);
+    const blpapi_Identity_t *identity);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_createTopicsAsync(
-    blpapi_ProviderSession_t* session,
-    const blpapi_TopicList_t* topicList,
+    blpapi_ProviderSession_t *session,
+    const blpapi_TopicList_t *topicList,
     int resolveMode,
-    blpapi_Identity_t const* identity);
+    const blpapi_Identity_t *identity);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_getTopic(
-    blpapi_ProviderSession_t* session,
-    const blpapi_Message_t* message,
-    blpapi_Topic_t** topic);
+    blpapi_ProviderSession_t *session,
+    const blpapi_Message_t *message,
+    blpapi_Topic_t **topic);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_createTopic(
-    blpapi_ProviderSession_t* session,
-    const blpapi_Message_t* message,
-    blpapi_Topic_t** topic);
+    blpapi_ProviderSession_t *session,
+    const blpapi_Message_t *message,
+    blpapi_Topic_t **topic);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_createServiceStatusTopic(
-    blpapi_ProviderSession_t* session,
+    blpapi_ProviderSession_t *session,
     const blpapi_Service_t *service,
-    blpapi_Topic_t** topic);
+    blpapi_Topic_t **topic);
+
+BLPAPI_EXPORT
+int blpapi_ProviderSession_deleteTopics(
+    blpapi_ProviderSession_t* session,
+    const blpapi_Topic_t** topics,
+    size_t numTopics);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_publish(
-    blpapi_ProviderSession_t* session,
-    blpapi_Event_t* event);
+    blpapi_ProviderSession_t *session,
+    blpapi_Event_t *event);
 
 BLPAPI_EXPORT
 int blpapi_ProviderSession_sendResponse(
-    blpapi_ProviderSession_t* session,
-    blpapi_Event_t* event,
+    blpapi_ProviderSession_t *session,
+    blpapi_Event_t *event,
     int isPartialResponse);
 
+
 BLPAPI_EXPORT
-blpapi_AbstractSession_t* blpapi_ProviderSession_getAbstractSession(
-    blpapi_ProviderSession_t* session);
+blpapi_AbstractSession_t *blpapi_ProviderSession_getAbstractSession(
+    blpapi_ProviderSession_t *session);
 
 // ServiceRegistrationOptions
 
@@ -224,7 +307,7 @@ blpapi_ServiceRegistrationOptions_create();
 BLPAPI_EXPORT
 blpapi_ServiceRegistrationOptions_t*
 blpapi_ServiceRegistrationOptions_duplicate(
-                        const blpapi_ServiceRegistrationOptions_t* parameters);
+                        const blpapi_ServiceRegistrationOptions_t *parameters);
 
 BLPAPI_EXPORT
 void blpapi_ServiceRegistrationOptions_destroy(
@@ -232,13 +315,24 @@ void blpapi_ServiceRegistrationOptions_destroy(
 
 BLPAPI_EXPORT
 void blpapi_ServiceRegistrationOptions_copy(
-                               blpapi_ServiceRegistrationOptions_t* lhs,
-                               const blpapi_ServiceRegistrationOptions_t* rhs);
+                               blpapi_ServiceRegistrationOptions_t *lhs,
+                               const blpapi_ServiceRegistrationOptions_t *rhs);
+
+// SUBSERVICE CODES
+BLPAPI_EXPORT
+int blpapi_ServiceRegistrationOptions_addActiveSubServiceCodeRange(
+    blpapi_ServiceRegistrationOptions_t *parameters,
+    int start, int end, int priority);
+
+BLPAPI_EXPORT
+void blpapi_ServiceRegistrationOptions_removeAllActiveSubServiceCodeRanges(
+    blpapi_ServiceRegistrationOptions_t *parameters);
 
 BLPAPI_EXPORT
 void blpapi_ServiceRegistrationOptions_setGroupId(
     blpapi_ServiceRegistrationOptions_t *parameters,
-    const char* groupId, unsigned int groupIdLength);
+    const char *groupId,
+    unsigned int groupIdLength);
 
 BLPAPI_EXPORT
 int blpapi_ServiceRegistrationOptions_setServicePriority(
@@ -246,13 +340,22 @@ int blpapi_ServiceRegistrationOptions_setServicePriority(
     int priority);
 
 BLPAPI_EXPORT
+void blpapi_ServiceRegistrationOptions_setPartsToRegister(
+    blpapi_ServiceRegistrationOptions_t *parameters,
+    int parts);
+
+BLPAPI_EXPORT
 int blpapi_ServiceRegistrationOptions_getGroupId(
     blpapi_ServiceRegistrationOptions_t *parameters,
-    const char* groupdIdBuffer,
+    char *groupdIdBuffer,
     int *groupIdLength);
 
 BLPAPI_EXPORT
 int blpapi_ServiceRegistrationOptions_getServicePriority(
+    blpapi_ServiceRegistrationOptions_t *parameters);
+
+BLPAPI_EXPORT
+int blpapi_ServiceRegistrationOptions_getPartsToRegister(
     blpapi_ServiceRegistrationOptions_t *parameters);
 
 #ifdef __cplusplus
@@ -277,6 +380,7 @@ class ProviderEventHandler {
     virtual bool processEvent(const Event& event,
                               ProviderSession *session) = 0;
 };
+
                       // ================================
                       // class ServiceRegistrationOptions
                       // ================================
@@ -298,6 +402,33 @@ class ServiceRegistrationOptions {
         PRIORITY_HIGH   = BLPAPI_SERVICEREGISTRATIONOPTIONS_PRIORITY_HIGH
     };
 
+    enum RegistrationParts {
+        // constants for specifying which part(s) of a service should be
+        // registered
+
+        PART_PUBLISHING = BLPAPI_REGISTRATIONPARTS_PUBLISHING,
+            // register to receive subscribe and unsubscribe messages
+
+        PART_OPERATIONS = BLPAPI_REGISTRATIONPARTS_OPERATIONS,
+            // register to receive the request types corresponding to each
+            // "operation" defined in the service metadata
+
+        PART_SUBSCRIBER_RESOLUTION
+                     = BLPAPI_REGISTRATIONPARTS_SUBSCRIBER_RESOLUTION,
+            // register to receive resolution requests (with message type
+            // 'PermissionRequest') from subscribers
+
+        PART_PUBLISHER_RESOLUTION
+                     = BLPAPI_REGISTRATIONPARTS_PUBLISHER_RESOLUTION,
+            // register to receive resolution requests (with message type
+            // 'PermissionRequest') from publishers (via
+            // 'ProviderSession::createTopics')
+
+        PART_DEFAULT    = BLPAPI_REGISTRATIONPARTS_DEFAULT
+            // register the parts of the service implied by options
+            // specified in the service metadata
+    };
+
     ServiceRegistrationOptions();
         // Create ServiceRegistrationOptions with default options.
 
@@ -313,7 +444,7 @@ class ServiceRegistrationOptions {
                                         const ServiceRegistrationOptions& rhs);
         // Assign to this object the value of the specified 'rhs' object.
 
-    void setGroupId(const char* groupId, unsigned int groupIdLength);
+    void setGroupId(const char *groupId, unsigned int groupIdLength);
         // Set the Group ID for the service to be registered to the specified
         // char array beginning at groupId with size groupIdLength.
         // If groupIdLength > MAX_GROUP_ID_SIZE (=64) only the first
@@ -328,11 +459,27 @@ class ServiceRegistrationOptions {
         // pre-defined in ServiceRegistrationPriority can be used.
         // Default value is PRIORITY_HIGH
 
+    void setPartsToRegister(int parts);
+        // Set the parts of the service to be registered to the specified
+        // 'parts', which must be a bitwise-or of the options provided in
+        // 'RegistrationParts', above.  This option defaults to
+        // 'RegistrationParts::PARTS_DEFAULT'.
+
+    void addActiveSubServiceCodeRange(int begin, int end, int priority);
+        // Advertise the service to be registered to receive, with the
+        // specified 'priority', subscriptions that the resolver has mapped to
+        // a service code between the specified 'begin' and the specified 'end'
+        // values, inclusive. The behavior of this function is undefined unless
+        // '0 <= begin <= end < (1 << 24)', and 'priority' is non-negative.
+
+    void removeAllActiveSubServiceCodeRanges();
+        // Remove all previously added sub-service code ranges.
+
+
     // ACCESSORS
+    blpapi_ServiceRegistrationOptions_t *handle() const;
 
-    blpapi_ServiceRegistrationOptions_t* handle() const;
-
-    int getGroupId(const char* groupId, int *groupIdLength) const;
+    int getGroupId(char *groupId, int *groupIdLength) const;
         // Copy the previously specified groupId at the memory location
         // specified by groupId and the set the size of the groupId returned at
         // groupIdLength. A Non-zero value indicates an error.
@@ -345,6 +492,9 @@ class ServiceRegistrationOptions {
         // Return the value of the service priority in this
         // ServiceRegistrationOptions instance.
 
+    int getPartsToRegister() const;
+        // Return the parts of the service to be registered.  See
+        // 'RegistrationParts', above for additional details.
 };
                          // =====================
                          // class ProviderSession
@@ -357,18 +507,24 @@ class ProviderSession : public AbstractSession {
     // functionality a ProviderSession provides the following
     // functions to applications.
     //
-    // Applications can register to provide Services using either
-    // registerService() or registerServiceAsync(). Before registering
-    // to provide a Service an application must have established its
-    // identity.
+    // A provider can register to provide services using
+    // 'ProviderSession::registerService*'. Before registering to provide a
+    // service the provider must have established its identity. Then
+    // the provider can create topics and publish events on topics. It also
+    // can get requests from the event queue and send back responses.
     //
-    // Applications use the ProviderSession to resolve topics using
-    // resolve() or resolveAsync(), create the resulting Topic objects
-    // using createTopic() and then publish(). Another way to start
-    // publishing is the call createTopics or createTopicsAsync
-    // with a list of topics. This call internally resolves and
-    // creates topics for user.
-    // Events containing Messages addressed to specific topics.
+    // After users have registered a service they will start receiving
+    // subscription requests ('TopicSubscribed' message in 'TOPIC_STATUS') for
+    // topics which belong to the service. If the resolver has specified
+    // 'subServiceCode' for topics in 'PermissionResponse', then only providers
+    // who have activated the 'subServiceCode' will get the subscription
+    // request. Where multiple providers have registered the same service and
+    // sub-service code (if any), the provider that registered the highest
+    // priority for the sub-service code will receive subscription requests; if
+    // multiple providers have registered the same sub-service code with the
+    // same priority (or the resolver did not set a sub-service code for the
+    // subscription), the subscription request will be routed to one of the
+    // providers with the highest service priority.
 
     blpapi_ProviderSession_t    *d_handle_p;
     ProviderEventHandler        *d_eventHandler_p;
@@ -394,9 +550,9 @@ class ProviderSession : public AbstractSession {
               // registered.
     };
 
-    ProviderSession(const SessionOptions& options = SessionOptions(),
-                    ProviderEventHandler* eventHandler=0,
-                    EventDispatcher* eventDispatcher=0);
+    ProviderSession(const SessionOptions&  options = SessionOptions(),
+                    ProviderEventHandler  *eventHandler=0,
+                    EventDispatcher       *eventDispatcher=0);
         // Construct a Session using the optionally specified
         // 'options', the optionally specified 'eventHandler' and the
         // optionally specified 'eventDispatcher'.
@@ -456,13 +612,13 @@ class ProviderSession : public AbstractSession {
         // See AbstractSession::tryNextEvent()
 
     bool registerService(
-                        const char                        *uri,
+                        const char                        *serviceName,
                         const Identity&                    providerIdentity
                             = Identity(),
                         const ServiceRegistrationOptions&  registrationOptions
                             = ServiceRegistrationOptions());
         // Attempt to register the service identified by the specified
-        // 'uri' and block until the service is either registered
+        // 'serviceName' and block until the service is either registered
         // successfully or has failed to be registered. The optionally
         // specified 'providerIdentity' is used to verify permissions
         // to provide the service being registered. The optionally
@@ -471,18 +627,35 @@ class ProviderSession : public AbstractSession {
         // Returns 'true' if the service is registered successfully and
         // 'false' if the service cannot be registered successfully.
         //
-        // The 'uri' must begin with a full qualified service
-        // name. That is it must begin with
-        // "//<namespace>/<service-name>[/]". Any portion of the 'uri'
-        // after the service name is ignored.
+        // The 'serviceName' must be a full qualified service name. That is it
+        // must be of the form '//<namespace>/<local-name>'.
         //
-        // Before registerService() returns a SERVICE_STATUS Event is
-        // generated. If this is an asynchronous ProviderSession then
-        // this Event may be processed by the registered Event before
-        // registerService() has returned.
+        // This function does not return until a SERVICE_STATUS event has been
+        // generated. Note that if the session was created in asynchronous
+        // mode, the event may be processed before the function returns.
+
+    void activateSubServiceCodeRange(const char *serviceName,
+                                     int         begin,
+                                     int         end,
+                                     int         priority);
+        // Register to receive, with the specified 'priority', subscriptions
+        // for the specified 'service' that the resolver has mapped to a
+        // service code between the specified 'begin' and the specified 'end'
+        // values, inclusive. The behavior of this function is undefined unless
+        // 'service' has already been successfully registered,
+        // '0 <= begin <= end < (1 << 24)', and 'priority' is non-negative.
+
+    void deactivateSubServiceCodeRange(const char *serviceName,
+                                       int         begin,
+                                       int         end);
+        // De-register to receive subscriptions for the specified 'service'
+        // that the resolver has mapped to a service code between the specified
+        // 'begin' and the specified 'end' values, inclusive. The behavior of
+        // this function is undefined unless 'service' has already been
+        // successfully registered and '0 <= begin <= end < (1 << 24)'.
 
     CorrelationId registerServiceAsync(
-                        const char                        *uri,
+                        const char                        *serviceName,
                         const Identity&                    providerIdentity
                             = Identity(),
                         const CorrelationId&               correlationId
@@ -490,28 +663,41 @@ class ProviderSession : public AbstractSession {
                         const ServiceRegistrationOptions&  registrationOptions
                             = ServiceRegistrationOptions());
         // Begin the process of registering the service identified by
-        // the specified 'uri' and return immediately. The optionally
+        // the specified 'serviceName' and return immediately. The optionally
         // specified 'providerIdentity' is used to verify permissions
         // to provide the service being registered. The optionally
-        // specified 'correlationId' is used to track Events generated
-        // as a result of this call. The actual correlationId that will
-        // identify Events generated as a result of this call is
-        // returned. The optionally specified 'registrationOptions' is
-        // used to specify the group ID and service priority of the
-        // service being registered.
+        // specified 'correlationId' is used to track 'Event' objects generated
+        // as a result of this call. Return the actual 'CorrelationId' object
+        // that will identify 'Event' objects. The optionally specified
+        // 'registrationOptions' is used to specify the group ID and service
+        // priority of the service being registered.
         //
-        // The 'uri' must begin with a full qualified service
-        // name. That is it must begin with
-        // "//<namespace>/<service-name>[/]". Any portion of the 'uri'
-        // after the service name is ignored.
+        // The 'serviceName' must be a full qualified service name. That is it
+        // must be of the form '//<namespace>/<local-name>'.
         //
         // The application must monitor events for a SERVICE_STATUS
         // Event which will be generated once the service has been
         // successfully registered or registration has failed.
 
-    void resolve(ResolutionList* resolutionList,
-                 ResolveMode resolveMode=DONT_REGISTER_SERVICES,
-                 Identity providerIdentity=Identity());
+    bool deregisterService(const char *serviceName);
+        // Deregister the service, including all registered parts, identified
+        // by the specified 'serviceName'. The identity in the service
+        // registration is reused to verify permissions for deregistration. If
+        // the service is not registered nor in pending registration, return
+        // false; return true otherwise. If the service is in pending
+        // registration, cancel the pending registration. If the service is
+        // registered, send a deregistration request; generate TOPIC_STATUS
+        // events containing a TopicUnsubscribed message for each subscribed
+        // topic, a TopicDeactivated message for each active topic and a
+        // TopicDeleted for each created topic; generate REQUEST_STATUS events
+        // containing a RequestFailure message for each pending incoming
+        // request; and generate a SERVICE_STATUS Event containing a
+        // ServiceDeregistered message. All published events on topics created
+        // on this service will be ignored after this method returns.
+
+    void resolve(ResolutionList *resolutionList,
+                 ResolveMode     resolveMode=DONT_REGISTER_SERVICES,
+                 Identity        providerIdentity=Identity());
         // Resolves the topics in the specified 'resolutionList' and
         // updates the 'resolutionList' with the results of the
         // resolution process. If the specified 'resolveMode' is
@@ -534,8 +720,8 @@ class ProviderSession : public AbstractSession {
         // has returned.
 
     void resolveAsync(const ResolutionList& resolutionList,
-                      ResolveMode resolveMode=DONT_REGISTER_SERVICES,
-                      const Identity& providerIdentity=Identity());
+                      ResolveMode           resolveMode=DONT_REGISTER_SERVICES,
+                      const Identity&       providerIdentity=Identity());
         // Begin the resolution of the topics in the specified
         // 'resolutionList'. If the specified 'resolveMode' is
         // DONT_REGISTER_SERVICES (the default) then all the services
@@ -554,8 +740,10 @@ class ProviderSession : public AbstractSession {
         // may also be generated before or after resolve() returns.
 
     Topic createTopic(const Message& message);
-        // DEPRECATED method, see createTopics()/createTopicsAsync(), and
-        // getTopic().
+        // DEPRECATED
+        // Create a topic from the specified 'message', which must be of type
+        // 'ResolutionSuccess'. This method is deprecated; use 'createTopics'
+        // or 'createTopicsAsync', which handle resolution automatically.
 
     Topic getTopic(const Message& message);
         // Finds a previously created Topic object based on the specified
@@ -571,14 +759,14 @@ class ProviderSession : public AbstractSession {
         // will return false.
 
     void publish(const Event& event);
-        // Publish the specified 'event'.
+        // Publish messages contained in the specified 'event'.
 
     void sendResponse(const Event& event, bool isPartialResponse = false);
         // Send the response event for previously received request
 
-    void createTopics(TopicList* topicList,
-                      ResolveMode resolveMode=DONT_REGISTER_SERVICES,
-                      Identity providerIdentity=Identity());
+    void createTopics(TopicList   *topicList,
+                      ResolveMode  resolveMode=DONT_REGISTER_SERVICES,
+                      Identity     providerIdentity=Identity());
         // Creates the topics in the specified 'topicList' and
         // updates the 'topicList' with the results of the
         // creation process. If service needs to be registered,
@@ -595,8 +783,8 @@ class ProviderSession : public AbstractSession {
         // before createTopics() has returned.
 
     void createTopicsAsync(const TopicList& topicList,
-                           ResolveMode resolveMode=DONT_REGISTER_SERVICES,
-                           const Identity& providerIdentity=Identity());
+                           ResolveMode      resolveMode=DONT_REGISTER_SERVICES,
+                           const Identity&  providerIdentity=Identity());
         // Creates the topics in the specified 'topicList' and
         // updates the 'topicList' with the results of the
         // creation process. If service needs to be registered,
@@ -609,9 +797,28 @@ class ProviderSession : public AbstractSession {
         // Events may be processed by the registered EventHandler
         // before createTopics() has returned.
 
-    // ACCESSORS
+    void deleteTopic(const Topic& topic);
+        // Remove one reference from the specified 'topic'. If this function
+        // has been called the same number of times that 'topic' was created
+        // by 'createTopics', then 'topic' is deleted: a 'TopicDeleted'
+        // message is delivered, preceded by 'TopicUnsubscribed' and
+        // 'TopicDeactivated' if 'topic' was subscribed. (See "Topic
+        // Life Cycle", above, for additional details.) The behavior of this
+        // function is undefined if 'topic' has already been deleted the same
+        // number of times that it has been created. Further, the behavior is
+        // undefined if a provider attempts to publish a message on a deleted
+        // topic.
 
-    blpapi_ProviderSession_t* handle() const;
+    void deleteTopics(const std::vector<Topic>& topics);
+        // Delete each topic in the specified 'topics'. See
+        // 'deleteTopic(const Topic&)' for additional details.
+
+    void deleteTopics(const Topic* topics,
+                      size_t       numTopics);
+        // Delete the first 'numTopics' elements of the specified 'topics'
+        // array. See 'deleteTopic(const Topic&)' for additional details.
+
+    blpapi_ProviderSession_t *handle() const;
         // Return the handle to this provider session
 };
 
@@ -698,18 +905,42 @@ int ProviderSession::tryNextEvent(Event *event)
 
 inline
 bool ProviderSession::registerService(
-                        const char                        *uri,
+                        const char                        *serviceName,
                         const Identity&                    identity,
                         const ServiceRegistrationOptions&  registrationOptions)
 {
     return blpapi_ProviderSession_registerService(
-        d_handle_p, uri, identity.handle(), registrationOptions.handle()) ?
-            false : true;
+               d_handle_p,
+               serviceName,
+               identity.handle(),
+               registrationOptions.handle()) ? false : true;
+}
+inline
+void ProviderSession::activateSubServiceCodeRange(const char *serviceName,
+                                     int begin, int end, int priority)
+{
+    ExceptionUtil::throwOnError(
+        BLPAPI_CALL_PROVIDERSESSION_ACTIVATESUBSERVICECODERANGE(d_handle_p,
+                                                                serviceName,
+                                                                begin,
+                                                                end,
+                                                                priority));
+}
+
+inline
+void ProviderSession::deactivateSubServiceCodeRange(const char *serviceName,
+                                                    int begin, int end)
+{
+    ExceptionUtil::throwOnError(
+        BLPAPI_CALL_PROVIDERSESSION_DEACTIVATESUBSERVICECODERANGE(d_handle_p,
+                                                                  serviceName,
+                                                                  begin,
+                                                                  end));
 }
 
 inline
 CorrelationId ProviderSession::registerServiceAsync(
-                        const char                        *uri,
+                        const char                        *serviceName,
                         const Identity&                    identity,
                         const CorrelationId&               correlationId,
                         const ServiceRegistrationOptions&  registrationOptions)
@@ -717,11 +948,19 @@ CorrelationId ProviderSession::registerServiceAsync(
     blpapi_CorrelationId_t retv = correlationId.impl();
     ExceptionUtil::throwOnError(
         blpapi_ProviderSession_registerServiceAsync(
-            d_handle_p, uri, identity.handle(),
+            d_handle_p, serviceName, identity.handle(),
             &retv, registrationOptions.handle())
         );
 
     return retv;
+}
+
+inline
+bool ProviderSession::deregisterService(const char *serviceName)
+{
+    return BLPAPI_CALL_PROVIDERSESSION_DEREGISTERSERVICE(
+            d_handle_p,
+            serviceName) == 0 ? true : false;
 }
 
 inline
@@ -810,6 +1049,53 @@ void ProviderSession::createTopicsAsync(const TopicList& topicList,
 }
 
 inline
+void ProviderSession::deleteTopic(const Topic& topic)
+{
+    const blpapi_Topic_t* topicImpl = topic.impl();
+    ExceptionUtil::throwOnError(BLPAPI_CALL_PROVIDERSESSION_DELETETOPICS(
+                                    d_handle_p,
+                                    &topicImpl,
+                                    1));
+}
+
+inline
+void ProviderSession::deleteTopics(const std::vector<Topic>& topics)
+{
+    if (topics.size() == 0) {
+        return;
+    }
+    std::vector<const blpapi_Topic_t *> topicImplList;
+    topicImplList.reserve(topics.size());
+    for (std::vector<Topic>::const_iterator it = topics.begin();
+         it != topics.end();
+         ++it) {
+        topicImplList.push_back(it->impl());
+    }
+    ExceptionUtil::throwOnError(BLPAPI_CALL_PROVIDERSESSION_DELETETOPICS(
+            d_handle_p,
+            &topicImplList[0],
+            topicImplList.size()));
+}
+
+inline
+void ProviderSession::deleteTopics(const Topic* topics,
+                                   size_t       numTopics)
+{
+    if (numTopics == 0) {
+        return;
+    }
+    std::vector<const blpapi_Topic_t *> topicImplList;
+    topicImplList.reserve(numTopics);
+    for (size_t i = 0; i < numTopics; ++i) {
+        topicImplList.push_back(topics[i].impl());
+    }
+    ExceptionUtil::throwOnError(BLPAPI_CALL_PROVIDERSESSION_DELETETOPICS(
+            d_handle_p,
+            &topicImplList[0],
+            topicImplList.size()));
+}
+
+inline
 void ProviderSession::publish(const Event& event)
 {
     ExceptionUtil::throwOnError(
@@ -871,6 +1157,27 @@ ServiceRegistrationOptions&  ServiceRegistrationOptions::operator=(
     return *this;
 }
 
+// SUBSERVICE CODES
+inline
+void ServiceRegistrationOptions::addActiveSubServiceCodeRange(int begin,
+                                                              int end,
+                                                              int priority)
+{
+    ExceptionUtil::throwOnError(
+        BLPAPI_CALL_SERVICEREGISTRATIONOPTIONS_ADDACTIVATESUBSERVICECODERANGE(
+            d_handle_p,
+            begin,
+            end,
+            priority));
+}
+
+inline
+void ServiceRegistrationOptions::removeAllActiveSubServiceCodeRanges()
+{
+    BLPAPI_CALL_SERVICEREGISTRATIONOPTIONS_REMOVEALLACTIVESUBSERVICECODERANGES(
+        d_handle_p);
+}
+
 inline
 void ServiceRegistrationOptions::setGroupId(const char* groupId,
                                             unsigned int groupIdLength)
@@ -878,6 +1185,7 @@ void ServiceRegistrationOptions::setGroupId(const char* groupId,
     blpapi_ServiceRegistrationOptions_setGroupId(d_handle_p, groupId,
                                                  groupIdLength);
 }
+
 inline
 int ServiceRegistrationOptions::setServicePriority(int priority)
 {
@@ -886,11 +1194,19 @@ int ServiceRegistrationOptions::setServicePriority(int priority)
 }
 
 inline
-int ServiceRegistrationOptions::getGroupId(
-    const char* groupIdBuffer, int *groupIdLength) const
+void ServiceRegistrationOptions::setPartsToRegister(int parts)
 {
-    return blpapi_ServiceRegistrationOptions_getGroupId(
-                d_handle_p, groupIdBuffer, groupIdLength);
+    BLPAPI_CALL_SERVICEREGISTRATIONOPTIONS_SETPARTSTOREGISTER(d_handle_p,
+                                                              parts);
+}
+
+inline
+int ServiceRegistrationOptions::getGroupId(char *groupIdBuffer,
+                                           int  *groupIdLength) const
+{
+    return blpapi_ServiceRegistrationOptions_getGroupId(d_handle_p,
+                                                        groupIdBuffer,
+                                                        groupIdLength);
 }
 
 inline
@@ -900,10 +1216,18 @@ int ServiceRegistrationOptions::getServicePriority() const
 }
 
 inline
+int ServiceRegistrationOptions::getPartsToRegister() const
+{
+    return BLPAPI_CALL_SERVICEREGISTRATIONOPTIONS_GETPARTSTOREGISTER(
+                                                                   d_handle_p);
+}
+
+inline
 blpapi_ServiceRegistrationOptions_t* ServiceRegistrationOptions::handle() const
 {
     return d_handle_p;
 }
+
                             // --------------------------
                             // class ProviderEventHandler
                             // --------------------------

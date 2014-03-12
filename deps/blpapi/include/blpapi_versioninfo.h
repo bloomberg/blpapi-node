@@ -76,9 +76,9 @@
 #endif
 
 #define BLPAPI_VERSION_MAJOR 3
-#define BLPAPI_VERSION_MINOR 6
-#define BLPAPI_VERSION_PATCH 3
-#define BLPAPI_VERSION_BUILD 0
+#define BLPAPI_VERSION_MINOR 7
+#define BLPAPI_VERSION_PATCH 5
+#define BLPAPI_VERSION_BUILD 1
 
 #define BLPAPI_MAKE_VERSION(MAJOR, MINOR, PATCH) ((MAJOR) * 10000 + \
                                                   (MINOR) * 100 + \

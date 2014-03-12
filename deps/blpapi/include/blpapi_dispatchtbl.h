@@ -34,7 +34,6 @@
 #include <blpapi_defs.h>
 #include <blpapi_correlationid.h>
 #include <blpapi_streamproxy.h>
-#include <blpapi_subscriptionlist.h>
 #include <blpapi_versioninfo.h>
 #include <stddef.h>
 
@@ -69,6 +68,13 @@ typedef struct blpapi_Request blpapi_Request_t;
 
 struct blpapi_HighPrecisionDatetime_tag;
 typedef struct blpapi_HighPrecisionDatetime_tag blpapi_HighPrecisionDatetime_t;
+
+struct blpapi_SubscriptionList;
+typedef struct blpapi_SubscriptionList blpapi_SubscriptionList_t;
+
+struct blpapi_ServiceRegistrationOptions;
+typedef struct blpapi_ServiceRegistrationOptions
+                                           blpapi_ServiceRegistrationOptions_t;
 
 // End Forward declarations
 
@@ -153,6 +159,53 @@ typedef struct blpapi_FunctionEntries {
         blpapi_EventFormatter_t *,
         const char *,
         const blpapi_Name_t *);
+    int (*blpapi_DiagnosticsUtil_memoryInfo)(
+        char *,
+        size_t);
+    int (*blpapi_SessionOptions_setKeepAliveEnabled)(
+        blpapi_SessionOptions_t *,
+        int);
+    int (*blpapi_SessionOptions_keepAliveEnabled)(
+        blpapi_SessionOptions_t *);
+    int (*blpapi_SubscriptionList_addResolved)(
+        blpapi_SubscriptionList_t *,
+        const char *,
+        const blpapi_CorrelationId_t *);
+    int (*blpapi_SubscriptionList_isResolvedAt)(
+        blpapi_SubscriptionList_t *,
+        int *,
+        size_t);
+    int (*blpapi_ProviderSession_deregisterService)(
+        blpapi_ProviderSession_t *session,
+        const char* serviceName);
+    void (*blpapi_ServiceRegistrationOptions_setPartsToRegister)(
+        blpapi_ServiceRegistrationOptions_t *session,
+        int parts);
+    int (*blpapi_ServiceRegistrationOptions_getPartsToRegister)(
+        blpapi_ServiceRegistrationOptions_t *session);
+    int (*blpapi_ProviderSession_deleteTopics)(
+        blpapi_ProviderSession_t* session,
+        const blpapi_Topic_t** topics,
+        size_t numTopics);
+    int (*blpapi_ProviderSession_activateSubServiceCodeRange)(
+        blpapi_ProviderSession_t *session,
+        const char* serviceName,
+        int begin,
+        int end,
+        int priority);
+    int (*blpapi_ProviderSession_deactivateSubServiceCodeRange)(
+        blpapi_ProviderSession_t *session,
+        const char* serviceName,
+        int begin,
+        int end);
+    int (*blpapi_ServiceRegistrationOptions_addActiveSubServiceCodeRange)(
+        blpapi_ServiceRegistrationOptions_t *parameters,
+        int start,
+        int end,
+        int priority);
+    void
+    (*blpapi_ServiceRegistrationOptions_removeAllActiveSubServiceCodeRanges)(
+        blpapi_ServiceRegistrationOptions_t *parameters);
 } blpapi_FunctionEntries_t;
 
 BLPAPI_EXPORT extern size_t                   g_blpapiFunctionTableSize;

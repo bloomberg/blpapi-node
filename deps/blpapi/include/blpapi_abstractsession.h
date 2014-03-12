@@ -32,6 +32,16 @@
 // interfaces which are shared between its concrete implementations 'Session'
 // and 'ProviderSession'.
 //
+// SERVICE IDENTIFIER
+// ------------------
+// A service identifier is the fully qualified service name which uniquely
+// identifies the service in the API infrastructure.
+// A service must be of the form "//<namespace>/<local-name>" where
+// '<namespace>' and '<local-name>' are non-empty strings of characters from
+// the set '[-_.a-zA-Z0-9]'. Service identifiers are case-insensitive, but
+// clients are encouraged to prefer identifiers without upper-case characters.
+// Note that the <namespace> and <local-name> cannot contain the character
+// '/'.
 
 #ifndef INCLUDED_BLPAPI_CORRELATIONID
 #include <blpapi_correlationid.h>
@@ -73,64 +83,64 @@ extern "C" {
 // blpapi_Identity_* versions of these functions instead.
 
 BLPAPI_EXPORT
-void blpapi_UserHandle_release(blpapi_UserHandle_t* handle);
+void blpapi_UserHandle_release(blpapi_UserHandle_t *handle);
 
 BLPAPI_EXPORT
-int blpapi_UserHandle_addRef(blpapi_UserHandle_t* handle);
+int blpapi_UserHandle_addRef(blpapi_UserHandle_t *handle);
 
 BLPAPI_EXPORT
 int blpapi_UserHandle_hasEntitlements(
-        const blpapi_UserHandle_t* handle,
-        const blpapi_Service_t *service,
-        const blpapi_Element_t *eidElement,
-        const int *entitlementIds,
-        size_t numEntitlements,
-        int *failedEntitlements,
-        int *failedEntitlementsCount);
+        const blpapi_UserHandle_t *handle,
+        const blpapi_Service_t    *service,
+        const blpapi_Element_t    *eidElement,
+        const int                 *entitlementIds,
+        size_t                     numEntitlements,
+        int                       *failedEntitlements,
+        int                       *failedEntitlementsCount);
 
 BLPAPI_EXPORT
 int blpapi_AbstractSession_cancel(
-        blpapi_AbstractSession_t *session,
+        blpapi_AbstractSession_t     *session,
         const blpapi_CorrelationId_t *correlationIds,
-        size_t numCorrelationIds,
-        const char *requestLabel,
-        int requestLabelLen);
+        size_t                        numCorrelationIds,
+        const char                   *requestLabel,
+        int                           requestLabelLen);
 
 BLPAPI_EXPORT
 int blpapi_AbstractSession_sendAuthorizationRequest(
         blpapi_AbstractSession_t *session,
-        const blpapi_Request_t *request,
-        blpapi_Identity_t *identity,
-        blpapi_CorrelationId_t *correlationId,
-        blpapi_EventQueue_t *eventQueue,
-        const char *requestLabel,
-        int requestLabelLen);
+        const blpapi_Request_t   *request,
+        blpapi_Identity_t        *identity,
+        blpapi_CorrelationId_t   *correlationId,
+        blpapi_EventQueue_t      *eventQueue,
+        const char               *requestLabel,
+        int                       requestLabelLen);
 
 BLPAPI_EXPORT
 int blpapi_AbstractSession_openService(
         blpapi_AbstractSession_t *session,
-        const char* serviceName);
+        const char               *serviceIdentifier);
 
 BLPAPI_EXPORT
 int blpapi_AbstractSession_openServiceAsync(
         blpapi_AbstractSession_t *session,
-        const char* serviceName,
-        blpapi_CorrelationId_t *correlationId);
+        const char               *serviceIdentifier,
+        blpapi_CorrelationId_t   *correlationId);
 
 BLPAPI_EXPORT
 int blpapi_AbstractSession_generateToken(
         blpapi_AbstractSession_t *session,
-        blpapi_CorrelationId_t *correlationId,
-        blpapi_EventQueue_t *eventQueue);
+        blpapi_CorrelationId_t   *correlationId,
+        blpapi_EventQueue_t      *eventQueue);
 
 BLPAPI_EXPORT
 int blpapi_AbstractSession_getService(
-        blpapi_AbstractSession_t *session,
-        blpapi_Service_t **service,
-        const char* serviceName);
+        blpapi_AbstractSession_t  *session,
+        blpapi_Service_t         **service,
+        const char                *serviceIdentifier);
 
 BLPAPI_EXPORT
-blpapi_Identity_t* blpapi_AbstractSession_createIdentity(
+blpapi_Identity_t *blpapi_AbstractSession_createIdentity(
         blpapi_AbstractSession_t *session);
 
 #ifdef __cplusplus
@@ -283,15 +293,15 @@ class AbstractSession {
         // available for the session, return a non-zero value with no effect
         // on event. This method never blocks.
 
-    bool openService(const char* uri);
+    bool openService(const char *serviceIdentifier);
         // Attempt to open the service identified by the specified
-        // 'uri' and block until the service is either opened
+        // 'serviceIdentifier' and block until the service is either opened
         // successfully or has failed to be opened. Return 'true' if
         // the service is opened successfully and 'false' if the
         // service cannot be successfully opened.
         //
-        // The 'uri' must contain a fully qualified service name. That
-        // is, it must be of the form "//<namespace>/<service-name>".
+        // The 'serviceIdentifier' must contain a fully qualified service name.
+        // That is, it must be of the form "//<namespace>/<local-name>".
         //
         // Before openService() returns a SERVICE_STATUS Event is
         // generated. If this is an asynchronous Session then this
@@ -299,27 +309,27 @@ class AbstractSession {
         // before openService() has returned.
 
     CorrelationId openServiceAsync(
-            const char* uri,
-            const CorrelationId& correlationId = CorrelationId());
+                        const char           *serviceIdentifier,
+                        const CorrelationId&  correlationId = CorrelationId());
         // Begin the process to open the service identified by the
-        // specified 'uri' and return immediately. The optional
+        // specified 'serviceIdentifier' and return immediately. The optional
         // specified 'correlationId' is used to track Events generated
         // as a result of this call. The actual correlationId which
         // will identify Events generated as a result of this call is
         // returned.
         //
-        // The 'uri' must contain a fully qualified service name. That
-        // is, it must be of the form "//<namespace>/<service-name>".
+        // The 'serviceIdentifier' must contain a fully qualified service name.
+        // That is, it must be of the form "//<namespace>/<local-name>".
         //
         // The application must monitor events for a SERVICE_STATUS
         // Event which will be generated once the service has been
         // successfully opened or the opening has failed.
 
     CorrelationId sendAuthorizationRequest(
-            const Request& authorizationRequest,
-            Identity *identity,
-            const CorrelationId& correlationId=CorrelationId(),
-            EventQueue* eventQueue=0);
+                           const Request&        authorizationRequest,
+                           Identity             *identity,
+                           const CorrelationId&  correlationId=CorrelationId(),
+                           EventQueue           *eventQueue=0);
         // Send the specified 'authorizationRequest' and update the
         // specified 'identity' with the results. If the optionally
         // specified 'correlationId' is supplied, it is used; otherwise
@@ -384,9 +394,8 @@ class AbstractSession {
         // is preferable not to aggressively re-use correlation IDs,
         // particularly with an asynchronous Session.
 
-    void cancel(
-            const CorrelationId* correlationIds,
-            size_t numCorrelationIds);
+    void cancel(const CorrelationId *correlationIds,
+                size_t               numCorrelationIds);
         // For each value specified 'correlationIds' and
         // 'numCorrelationIds' which identifies a current request then
         // cancel that request. Any specified CorrelationId's which do
@@ -406,23 +415,23 @@ class AbstractSession {
         // particularly with an asynchronous Session.
 
     CorrelationId generateToken(
-            const CorrelationId& correlationId = CorrelationId(),
-            EventQueue* eventQueue = 0);
+                         const CorrelationId&  correlationId = CorrelationId(),
+                         EventQueue           *eventQueue = 0);
         // Generate a token to be used for authorization.
         // If invalid authentication option is specified in session option or
         // there is failure to get authentication information based on
         // authentication option, then an InvalidArgumentException is thrown.
 
     // ACCESSORS
-    Service getService(const char* uri) const;
+    Service getService(const char *serviceIdentifier) const;
         // Return a Service object representing the service
-        // identified by the specified 'uri'
+        // identified by the specified 'serviceIdentifier'
         //
-        // The 'uri' must contain a fully qualified service name. That
-        // is, it must be of the form "//<namespace>/<service-name>".
+        // The 'serviceIdentifier' must contain a fully qualified service name.
+        // That is, it must be of the form "//<namespace>/<local-name>".
         //
-        // If the service identified by the specified 'uri' is not
-        // open already then an InvalidStateException is thrown.
+        // If the service identified by 'serviceIdentifier' is not open or
+        // registered already then a 'NotFoundException' is thrown.
 
     UserHandle createUserHandle();
         // Deprecated: Use createIdentity() instead. TODO: doxy
@@ -433,7 +442,7 @@ class AbstractSession {
         // Return a Identity which is valid but has not been
         // authorized.
 
-    blpapi_AbstractSession_t* abstractSessionHandle() const;
+    blpapi_AbstractSession_t *abstractSessionHandle() const;
         // Return the handle of this abstract session.
 };
 
@@ -464,22 +473,22 @@ AbstractSession::initAbstractSessionHandle(blpapi_AbstractSession_t *handle)
 }
 
 inline
-Service AbstractSession::getService(const char* serviceName) const
+Service AbstractSession::getService(const char *serviceIdentifier) const
 {
     blpapi_Service_t *service;
     ExceptionUtil::throwOnError(
             blpapi_AbstractSession_getService(d_handle_p,
-                                      &service,
-                                      serviceName));
+                                              &service,
+                                              serviceIdentifier));
     return service;
 }
 
 inline
 CorrelationId AbstractSession::sendAuthorizationRequest(
-        const Request& authorizationRequest,
-        Identity *identity,
-        const CorrelationId& correlationId,
-        EventQueue *eventQueue)
+                                    const Request&        authorizationRequest,
+                                    Identity             *identity,
+                                    const CorrelationId&  correlationId,
+                                    EventQueue           *eventQueue)
 {
     CorrelationId retCorrelationId(correlationId);
 
@@ -501,8 +510,7 @@ void AbstractSession::cancel(const CorrelationId& correlationId)
 }
 
 inline
-void AbstractSession::cancel(
-                              const std::vector<CorrelationId>& correlationIds)
+void AbstractSession::cancel(const std::vector<CorrelationId>& correlationIds)
 {
     if (!correlationIds.size()) {
         return;
@@ -511,8 +519,8 @@ void AbstractSession::cancel(
 }
 
 inline
-void AbstractSession::cancel(const CorrelationId* correlationIds,
-                           size_t numCorrelationIds)
+void AbstractSession::cancel(const CorrelationId *correlationIds,
+                             size_t               numCorrelationIds)
 {
     blpapi_AbstractSession_cancel(
             d_handle_p,
@@ -522,7 +530,8 @@ void AbstractSession::cancel(const CorrelationId* correlationIds,
 
 inline
 CorrelationId AbstractSession::generateToken(
-        const CorrelationId& correlationId, EventQueue* eventQueue)
+                                           const CorrelationId&  correlationId,
+                                           EventQueue           *eventQueue)
 {
     CorrelationId retCorrelationId(correlationId);
 
@@ -535,21 +544,23 @@ CorrelationId AbstractSession::generateToken(
 }
 
 inline
-bool AbstractSession::openService(const char* uri)
+bool AbstractSession::openService(const char *serviceIdentifier)
 {
-    return blpapi_AbstractSession_openService(d_handle_p, uri) ? false : true;
+    return blpapi_AbstractSession_openService(d_handle_p, serviceIdentifier)
+           ? false
+           : true;
 }
 
 inline
 CorrelationId AbstractSession::openServiceAsync(
-                                           const char           *uri,
-                                           const CorrelationId&  correlationId)
+                                       const char           *serviceIdentifier,
+                                       const CorrelationId&  correlationId)
 {
     blpapi_CorrelationId_t retv = correlationId.impl();
     ExceptionUtil::throwOnError(
         blpapi_AbstractSession_openServiceAsync(
             d_handle_p,
-            uri,
+            serviceIdentifier,
             &retv));
 
     return retv;
@@ -568,7 +579,7 @@ Identity AbstractSession::createIdentity()
 }
 
 inline
-blpapi_AbstractSession_t* AbstractSession::abstractSessionHandle() const
+blpapi_AbstractSession_t *AbstractSession::abstractSessionHandle() const
 {
     return d_handle_p;
 }

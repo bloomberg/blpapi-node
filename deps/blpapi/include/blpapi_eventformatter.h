@@ -218,21 +218,22 @@ namespace blpapi {
                          // ====================
 
 class EventFormatter {
-    // EventFormatter is used to create Events for publishing.
+    // EventFormatter is used to populate 'Event's for publishing.
     //
     // An EventFormatter is created from an Event obtained from
-    // createPublishEvent() on Service. Once the Message or Messages
-    // have been appended to the Event using the EventFormatter the
-    // Event can be published using publish() on the ProviderSession.
+    // createPublishEvent() on Service. Once the Message or Messages have been
+    // appended to the Event using the EventFormatter the Event can be
+    // published using publish() on the ProviderSession.
     //
-    // EventFormatter objects cannot be copied or assigned so as to
-    // ensure there is no ambiguity about what happens if two
-    // EventFormatters are both formatting the same Event.
+    // EventFormatter objects cannot be copied or assigned so as to ensure
+    // there is no ambiguity about what happens if two 'EventFormatter's are
+    // both formatting the same 'Event'.
     //
-    // The EventFormatter supports write once only to each field. It
-    // is an error to call setElement() or pushElement() for the same
-    // name more than once at a particular level of the schema when
-    // creating a message.
+    // The EventFormatter supportes appending message of the same type multiple
+    // time in the same 'Event'. However the 'EventFormatter' supports write
+    // once only to each field. It is an error to call setElement() or
+    // pushElement() for the same name more than once at a particular level of
+    // the schema when creating a message.
 
     blpapi_EventFormatter_t *d_handle;
 
@@ -415,7 +416,10 @@ class EventFormatter {
     void setElementNull(const char *name);
         // Create a null element with the specified 'name'. Note that whether
         // or not fields containing null values are published to subscribers is
-        // dependent upon details of the service and schema configuration.
+        // dependent upon details of the service and schema configuration. If
+        // the 'name' is invalid for the current message, if appendMessage()
+        // has never been called or if the element identified by 'name' has
+        // already been set an exception is thrown.
 
     void setElement(const Name& name, bool value);
         // Set the element with the specified 'name' to the specified
@@ -496,37 +500,27 @@ class EventFormatter {
     void setElementNull(const Name& name);
         // Create a null element with the specified 'name'. Note that whether
         // or not fields containing null values are published to subscribers is
-        // dependent upon details of the service and schema configuration.
+        // dependent upon details of the service and schema configuration. If
+        // the 'name' is invalid for the current message, if appendMessage()
+        // has never been called or if the element identified by 'name' has
+        // already been set an exception is thrown.
 
     void pushElement(const char *name);
-        // Changes the level at which this EventFormatter is operating
-        // to the specified element 'name'. The element 'name' must
-        // identify either a choice, a sequence or an array at the
-        // current level of the schema or the behavior is
-        // undefined. After this returns the context of the
-        // EventFormatter is set to the element 'name' in the schema
-        // and any calls to setElement() or pushElement() are applied
-        // at that level. If 'name' represents an array of scalars
-        // then appendValue() must be used to add values. If 'name'
-        // represents an array of complex types then appendElement()
-        // creates the first entry and set the context of the
-        // EventFormatter to that element. Calling appendElement()
-        // again will create another entry.
-
     void pushElement(const Name& name);
         // Changes the level at which this EventFormatter is operating
         // to the specified element 'name'. The element 'name' must
         // identify either a choice, a sequence or an array at the
         // current level of the schema or the behavior is
-        // undefined. After this returns the context of the
-        // EventFormatter is set to the element 'name' in the schema
-        // and any calls to setElement() or pushElement() are applied
-        // at that level. If 'name' represents an array of scalars
-        // then appendValue() must be used to add values. If 'name'
-        // represents an array of complex types then appendElement()
-        // creates the first entry and set the context of the
-        // EventFormatter to that element. Calling appendElement()
-        // again will create another entry.
+        // undefined.  If the 'name' is invalid for the current message, if
+        // appendMessage() has never been called or if the element identified
+        // by 'name' has already been set an exception is thrown. After this
+        // returns the context of the EventFormatter is set to the element
+        // 'name' in the schema and any calls to setElement() or pushElement()
+        // are applied at that level. If 'name' represents an array of scalars
+        // then appendValue() must be used to add values. If 'name' represents
+        // an array of complex types then appendElement() creates the first
+        // entry and set the context of the EventFormatter to that element.
+        // Calling appendElement() again will create another entry.
 
     void popElement();
         // Undoes the most recent call to pushLevel() on this
