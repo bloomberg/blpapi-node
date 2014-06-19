@@ -10,10 +10,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bloomberg/node-blpapi.git"
+    "url": "https://github.com/bloomberg/blpapi-node.git"
   },
   "bugs": {
-    "url": "https://github.com/bloomberg/node-blpapi/issues",
+    "url": "https://github.com/bloomberg/blpapi-node/issues",
     "email": "open-tech@bloomberg.net"
   },
   "maintainers": [
