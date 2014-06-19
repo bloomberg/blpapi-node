@@ -1,5 +1,5 @@
-[![build status](https://secure.travis-ci.org/bloomberg/node-blpapi.png)](http://travis-ci.org/bloomberg/node-blpapi)
-node-blpapi
+[![build status](https://secure.travis-ci.org/bloomberg/blpapi-node.png)](http://travis-ci.org/bloomberg/blpapi-node)
+blpapi-node
 ===========
 
 [Bloomberg Open API] binding for [Node.js].
@@ -8,7 +8,9 @@ Find source code in the [Github repository].
 
 [Bloomberg Open API]: http://openbloomberg.com/open-api
 [Node.js]: http://nodejs.org
-[Github repository]: https://github.com/bloomberg/node-blpapi
+[Github repository]: https://github.com/bloomberg/blpapi-node
+
+**Note:** This repository was renamed from `node-blpapi` to `blpapi-node`.
 
 Dependencies
 ------------
@@ -39,7 +41,7 @@ $ npm install blpapi
 To install directly from github source, run:
 
 ```
-$ npm install git://github.com/bloomberg/node-blpapi.git
+$ npm install git://github.com/bloomberg/blpapi-node.git
 ```
 
 This will download and build `blpapi` in `node_modules/`.
@@ -117,4 +119,4 @@ responses, and options are contained within the BLPAPI API
 License
 -------
 
-MIT license. See license text in [LICENSE](https://github.com/bloomberg/node-blpapi/blob/master/LICENSE).
+MIT license. See license text in [LICENSE](https://github.com/bloomberg/blpapi-node/blob/master/LICENSE).

@@ -1,6 +1,6 @@
 {
   "name": "blpapi",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "main": "./blpapi.js",
   "description": "Bloomberg Open API (BLPAPI) binding for node.js",
   "os": [ "linux", "win32", "darwin" ],
@@ -10,10 +10,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bloomberg/node-blpapi.git"
+    "url": "https://github.com/bloomberg/blpapi-node.git"
   },
   "bugs": {
-    "url": "https://github.com/bloomberg/node-blpapi/issues",
+    "url": "https://github.com/bloomberg/blpapi-node/issues",
     "email": "open-tech@bloomberg.net"
   },
   "maintainers": [
