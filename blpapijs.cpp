@@ -113,6 +113,7 @@ private:
     static Persistent<String> s_value;
     static Persistent<String> s_class_id;
     static Persistent<String> s_data;
+    static Persistent<String> s_overrides;
 
     blpapi::SessionOptions d_options;
     blpapi::Session *d_session;
@@ -133,6 +134,7 @@ Persistent<String> Session::s_correlations;
 Persistent<String> Session::s_value;
 Persistent<String> Session::s_class_id;
 Persistent<String> Session::s_data;
+Persistent<String> Session::s_overrides;
 
 Session::Session(const std::string& serverHost, int serverPort,
                  const std::string& authenticationOptions)
@@ -197,6 +199,7 @@ Session::Initialize(Handle<Object> target)
     s_value = NODE_PSYMBOL("value");
     s_class_id = NODE_PSYMBOL("classId");
     s_data = NODE_PSYMBOL("data");
+    s_overrides = NODE_PSYMBOL("overrides");
 }
 
 Handle<Value>
@@ -747,6 +750,36 @@ Session::Request(const Arguments& args)
                 } else {
                     return ThrowException(Exception::Error(String::New(
                                 "Array contains invalid value type.")));
+                }
+            }
+        } else if (val->IsObject() && key->Equals(s_overrides)) {
+            blpapi::Element overrides = request.getElement("overrides");
+            Local<Array> subkeys = val->ToObject()->GetPropertyNames();
+            for (std::size_t j = 0; j < subkeys->Length(); ++j) {
+                blpapi::Element override = overrides.appendElement();
+                Local<String> subkey = subkeys->Get(j)->ToString();
+                String::Utf8Value subkeyv(subkey);
+                Local<Value> subval = val->ToObject()->Get(subkey);
+                if (subval->IsString()) {
+                    Local<String> s = subval->ToString();
+                    String::Utf8Value subvalv(s);
+                    override.setElement(*subkeyv, *subvalv);
+                } else if (subval->IsBoolean()) {
+                    override.setElement(*subkeyv, subval->BooleanValue());
+                } else if (subval->IsNumber()) {
+                    override.setElement(*subkeyv, subval->NumberValue());
+                } else if (subval->IsInt32()) {
+                    override.setElement(*subkeyv, subval->Int32Value());
+                } else if (subval->IsUint32()) {
+                    override.setElement(*subkeyv,
+                        static_cast<blpapi::Int64>(subval->Uint32Value()));
+                } else if (subval->IsDate()) {
+                    blpapi::Datetime dt;
+                    mkdatetime(&dt, subval);
+                    request.append(*subkeyv, dt);
+                } else {
+                    return ThrowException(Exception::Error(String::New(
+                                "Object 'overrides' contains invalid type.")));
                 }
             }
         } else {
