@@ -591,7 +591,7 @@ Session::subscribe(const Arguments& args, int action)
         else if (action == 2)
             session->d_session->unsubscribe(sl);
         else
-            session->d_session->subscribe(sl, *labelv, labelv.length());
+            session->d_session->subscribe(sl, session->d_identity, *labelv, labelv.length());
     } else {
         if (action == 1)
             session->d_session->resubscribe(sl);
