@@ -5,6 +5,9 @@
 #include <v8.h>
 #include <node.h>
 #include <node_version.h>
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+#include <node_object_wrap.h>
+#endif
 #include <uv.h>
 
 #include <blpapi_session.h>
@@ -45,18 +48,26 @@
 # endif
 #endif
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+# define NoRetThrowException(x) args.GetIsolate()->ThrowException(x)
+# define RetThrowException(x) args.GetIsolate()->ThrowException(x); return
+# define NEW_STRING(x) String::NewFromUtf8(args.GetIsolate(), x)
+#else
+# define NoRetThrowException(x) ThrowException(x)
+# define RetThrowException(x) return ThrowException(x)
+# define NEW_STRING(x) String::New(x)
+#endif
+
 #define BLPAPI_EXCEPTION_TRY try {
-#define BLPAPI_EXCEPTION_CATCH \
-    } catch (blpapi::Exception& e) { \
-        ThrowException(Exception::Error( \
-                String::New(e.description().c_str(), \
-                            e.description().length()))); \
+#define BLPAPI_EXCEPTION_CATCH                                              \
+    } catch (blpapi::Exception& e) {                                        \
+        NoRetThrowException(Exception::Error(                               \
+            NEW_STRING(e.description().c_str())));                          \
     }
-#define BLPAPI_EXCEPTION_CATCH_RETURN \
-    } catch (blpapi::Exception& e) { \
-        return ThrowException(Exception::Error( \
-                String::New(e.description().c_str(), \
-                            e.description().length()))); \
+#define BLPAPI_EXCEPTION_CATCH_RETURN                                       \
+    } catch (blpapi::Exception& e) {                                        \
+        RetThrowException(Exception::Error(                                 \
+            NEW_STRING(e.description().c_str())));                          \
     }
 
 using namespace node;
@@ -68,11 +79,30 @@ namespace blpapijs {
 class Session : public ObjectWrap,
                 public blpapi::EventHandler {
 public:
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    Session(const FunctionCallbackInfo<Value>& args,
+            const std::string& serverHost, int serverPort,
+            const std::string& authenticationOptions);
+#else
     Session(const std::string& serverHost, int serverPort,
             const std::string& authenticationOptions);
+#endif
     ~Session();
 
     static void Initialize(Handle<Object> target);
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    static void New(const FunctionCallbackInfo<Value>& args);
+
+    static void Start(const FunctionCallbackInfo<Value>& args);
+    static void Authorize(const FunctionCallbackInfo<Value>& args);
+    static void Stop(const FunctionCallbackInfo<Value>& args);
+    static void Destroy(const FunctionCallbackInfo<Value>& args);
+    static void OpenService(const FunctionCallbackInfo<Value>& args);
+    static void Subscribe(const FunctionCallbackInfo<Value>& args);
+    static void Resubscribe(const FunctionCallbackInfo<Value>& args);
+    static void Unsubscribe(const FunctionCallbackInfo<Value>& args);
+    static void Request(const FunctionCallbackInfo<Value>& args);
+#else
     static Handle<Value> New(const Arguments& args);
 
     static Handle<Value> Start(const Arguments& args);
@@ -84,25 +114,37 @@ public:
     static Handle<Value> Resubscribe(const Arguments& args);
     static Handle<Value> Unsubscribe(const Arguments& args);
     static Handle<Value> Request(const Arguments& args);
+#endif
 
 private:
     Session();
     Session(const Session&);
     Session& operator=(const Session&);
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    static void subscribe(const FunctionCallbackInfo<Value>& args,
+                          int action);
+#else
     static Handle<Value> subscribe(const Arguments& args, int action);
+#endif
     static void formFields(std::string* str, Handle<Object> array);
     static void formOptions(std::string* str, Handle<Value> array);
-    static Handle<Value> elementToValue(const blpapi::Element& e);
-    static Handle<Value> elementValueToValue(const blpapi::Element& e,
+    static Handle<Value> elementToValue(Isolate *, const blpapi::Element& e);
+    static Handle<Value> elementValueToValue(Isolate *,
+                                             const blpapi::Element& e,
                                              int idx = 0);
 
     bool processEvent(const blpapi::Event& ev, blpapi::Session* session);
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    static void processEvents(uv_async_t *async);
+#else
     static void processEvents(uv_async_t *async, int status);
-    void processMessage(blpapi::Event::EventType et,
+#endif
+    void processMessage(Isolate *isolate,
+                        blpapi::Event::EventType et,
                         const blpapi::Message& msg);
 
-    void emit(int argc, Handle<Value> argv[]);
+    void emit(Isolate *isolate, int argc, Handle<Value> argv[]);
 
     static uv_async_t s_async;
     static Persistent<String> s_emit;
@@ -115,6 +157,7 @@ private:
     static Persistent<String> s_data;
     static Persistent<String> s_overrides;
 
+    Isolate *d_isolate;
     blpapi::SessionOptions d_options;
     blpapi::Session *d_session;
     blpapi::Identity d_identity;
@@ -136,9 +179,18 @@ Persistent<String> Session::s_class_id;
 Persistent<String> Session::s_data;
 Persistent<String> Session::s_overrides;
 
-Session::Session(const std::string& serverHost, int serverPort,
+Session::Session(
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+                 const FunctionCallbackInfo<Value>& args,
+#endif
+                 const std::string& serverHost, int serverPort,
                  const std::string& authenticationOptions)
-    : d_started(false)
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    : d_isolate(args.GetIsolate())
+#else
+    : d_isolate(Isolate::GetCurrent())
+#endif
+    , d_started(false)
     , d_stopped(false)
 {
     d_options.setServerHost(serverHost.c_str());
@@ -169,8 +221,14 @@ Session::~Session()
 void
 Session::Initialize(Handle<Object> target)
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    Isolate *isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+    Local<FunctionTemplate> t = FunctionTemplate::New(isolate, Session::New);
+#else
     HandleScope scope;
     Local<FunctionTemplate> t = FunctionTemplate::New(Session::New);
+#endif
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
@@ -184,13 +242,33 @@ Session::Initialize(Handle<Object> target)
     NODE_SET_PROTOTYPE_METHOD(t, "unsubscribe", Unsubscribe);
     NODE_SET_PROTOTYPE_METHOD(t, "request", Request);
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    target->Set(String::NewFromUtf8(isolate, "Session",
+                                    v8::String::kInternalizedString),
+                t->GetFunction());
+#else
     target->Set(String::NewSymbol("Session"), t->GetFunction());
+#endif
 
     uv_async_init(uv_default_loop(), &s_async, Session::processEvents);
 #if !NODE_VERSION_AT_LEAST(0, 7, 9)
     uv_unref(uv_default_loop());
 #endif
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+#define NODE_PSYMBOL(x) \
+    String::NewFromUtf8(isolate, x, String::kInternalizedString)
+    s_emit.Reset(isolate, NODE_PSYMBOL("emit"));
+    s_event_type.Reset(isolate, NODE_PSYMBOL("eventType"));
+    s_message_type.Reset(isolate, NODE_PSYMBOL("messageType"));
+    s_topic_name.Reset(isolate, NODE_PSYMBOL("topicName"));
+    s_correlations.Reset(isolate, NODE_PSYMBOL("correlations"));
+    s_value.Reset(isolate, NODE_PSYMBOL("value"));
+    s_class_id.Reset(isolate, NODE_PSYMBOL("classId"));
+    s_data.Reset(isolate, NODE_PSYMBOL("data"));
+    s_overrides.Reset(isolate, NODE_PSYMBOL("overrides"));
+#undef NODE_PSYMBOL
+#else
     s_emit = NODE_PSYMBOL("emit");
     s_event_type = NODE_PSYMBOL("eventType");
     s_message_type = NODE_PSYMBOL("messageType");
@@ -200,12 +278,22 @@ Session::Initialize(Handle<Object> target)
     s_class_id = NODE_PSYMBOL("classId");
     s_data = NODE_PSYMBOL("data");
     s_overrides = NODE_PSYMBOL("overrides");
+#endif
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::New(const FunctionCallbackInfo<Value>& args)
+#else
 Handle<Value>
 Session::New(const Arguments& args)
+#endif
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
     HandleScope scope;
+#endif
 
     std::string serverHost;
     int serverPort = 0;
@@ -215,92 +303,124 @@ Session::New(const Arguments& args)
         Local<Object> o = args[0]->ToObject();
 
         // Capture the host name
-        Local<Value> h = o->Get(String::New("host"));
+        Local<Value> h = o->Get(NEW_STRING("host"));
         if (h->IsUndefined())
-            h = o->Get(String::New("serverHost"));
+            h = o->Get(NEW_STRING("serverHost"));
         if (!h->IsUndefined()) {
-            String::AsciiValue hv(h);
+            String::Utf8Value hv(h);
             if (hv.length())
                 serverHost.assign(*hv, hv.length());
         }
-        if (0 == serverHost.length())
-            return ThrowException(Exception::Error(String::New(
-                        "Configuration missing 'serverHost'.")));
+        if (0 == serverHost.length()) {
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Configuration missing 'serverHost'.")));
+        }
 
         // Capture the port number
-        Local<Value> p = o->Get(String::New("port"));
+        Local<Value> p = o->Get(NEW_STRING("port"));
         if (p->IsUndefined())
-            p = o->Get(String::New("serverPort"));
+            p = o->Get(NEW_STRING("serverPort"));
         if (p->IsInt32())
             serverPort = p->ToInt32()->Value();
-        if (0 == serverPort)
-            return ThrowException(Exception::Error(String::New(
-                        "Configuration missing non-zero 'serverPort'.")));
+        if (0 == serverPort) {
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Configuration missing non-zero 'serverPort'.")));
+        }
 
         // Capture optional authentication options
-        Local<Value> ao = o->Get(String::New("authenticationOptions"));
+        Local<Value> ao = o->Get(NEW_STRING("authenticationOptions"));
         if (!ao->IsUndefined()) {
-            String::AsciiValue aov(ao);
+            String::Utf8Value aov(ao);
             if (aov.length())
                 authenticationOptions.assign(*aov, aov.length());
         }
     } else {
-        return ThrowException(Exception::Error(String::New(
-                        "Configuration object must be passed as parameter.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Configuration object must be passed as parameter.")));
     }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    Session *session = new Session(args, serverHost, serverPort,
+                                   authenticationOptions);
+    session->Wrap(args.This());
+    args.GetReturnValue().Set(scope.Escape(args.This()));
+#else
     Session *session = new Session(serverHost, serverPort,
                                    authenticationOptions);
     session->Wrap(args.This());
     return scope.Close(args.This());
+#endif
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::Start(const FunctionCallbackInfo<Value>& args)
+#else
 Handle<Value>
 Session::Start(const Arguments& args)
+#endif
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
     HandleScope scope;
+#endif
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
-    if (session->d_started)
-        return ThrowException(Exception::Error(String::New(
-                        "Session has already been started.")));
-    if (session->d_stopped)
-        return ThrowException(Exception::Error(String::New(
-                        "Stopped sessions can not be restarted.")));
+    if (session->d_started) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been started.")));
+    }
+    if (session->d_stopped) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Stopped sessions can not be restarted.")));
+    }
 
     BLPAPI_EXCEPTION_TRY
     session->d_session->startAsync();
     BLPAPI_EXCEPTION_CATCH_RETURN
 
-    session->d_session_ref =
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
-        Persistent<Object>::New(Isolate::GetCurrent(), args.This());
+    session->d_session_ref.Reset(args.GetIsolate(), args.This());
 #else
-        Persistent<Object>::New(args.This());
+    session->d_session_ref = Persistent<Object>::New(args.This());
 #endif
     session->d_started = true;
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    args.GetReturnValue().Set(scope.Escape(args.This()));
+#else
     return scope.Close(args.This());
+#endif
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::Authorize(const FunctionCallbackInfo<Value>& args)
+#else
 Handle<Value>
 Session::Authorize(const Arguments& args)
+#endif
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
     HandleScope scope;
+#endif
 
     if (args.Length() < 1 || !args[0]->IsString()) {
-        return ThrowException(Exception::Error(String::New(
-                "Service URI string must be provided as first parameter.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Service URI string must be provided as first parameter.")));
     }
     if (args.Length() < 2 || !args[1]->IsInt32()) {
-        return ThrowException(Exception::Error(String::New(
-                "Integer correlation identifier must be provided "
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Integer correlation identifier must be provided "
                 "as second parameter.")));
     }
     if (args.Length() > 2) {
-        return ThrowException(Exception::Error(String::New(
-                "Function expects at most two arguments.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Function expects at most two arguments.")));
     }
 
     Local<String> s = args[0]->ToString();
@@ -329,14 +449,13 @@ Session::Authorize(const Arguments& args)
                 std::stringstream ss;
                 ss << "Failed to generate token: " << msg.getElement("reason");
                 std::string s = ss.str();
-                return ThrowException(Exception::Error(String::New(
-                        s.c_str())));
+                RetThrowException(Exception::Error(NEW_STRING(s.c_str())));
             }
         }
     }
     if (0 == token.length()) {
-        return ThrowException(Exception::Error(String::New(
-                        "Failed to get token.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Failed to get token.")));
     }
 
     blpapi::Service authService = session->d_session->getService(*uriv);
@@ -351,22 +470,38 @@ Session::Authorize(const Arguments& args)
 
     BLPAPI_EXCEPTION_CATCH_RETURN
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    args.GetReturnValue().Set(
+        scope.Escape(Integer::New(args.GetIsolate(), cidi)));
+#else
     return scope.Close(Integer::New(cidi));
+#endif
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::Stop(const FunctionCallbackInfo<Value>& args)
+#else
 Handle<Value>
 Session::Stop(const Arguments& args)
+#endif
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
     HandleScope scope;
+#endif
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
-    if (!session->d_started)
-        return ThrowException(Exception::Error(String::New(
-                        "Session has not been started.")));
-    if (session->d_stopped)
-        return ThrowException(Exception::Error(String::New(
-                        "Session has already been stopped.")));
+    if (!session->d_started) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has not been started.")));
+    }
+    if (session->d_stopped) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been stopped.")));
+    }
 
     session->d_stopped = true;
 
@@ -374,24 +509,44 @@ Session::Stop(const Arguments& args)
     session->d_session->stopAsync();
     BLPAPI_EXCEPTION_CATCH_RETURN
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    args.GetReturnValue().Set(scope.Escape(args.This()));
+#else
     return scope.Close(args.This());
+#endif
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::Destroy(const FunctionCallbackInfo<Value>& args)
+#else
 Handle<Value>
 Session::Destroy(const Arguments& args)
+#endif
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
     HandleScope scope;
+#endif
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
-    if (!session->d_started)
-        return ThrowException(Exception::Error(String::New(
-                        "Session has not been started.")));
-    if (!session->d_stopped)
-        return ThrowException(Exception::Error(String::New(
-                        "Session has not been stopped.")));
+    if (!session->d_started) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has not been started.")));
+    }
+    if (!session->d_stopped) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has not been stopped.")));
+    }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    session->d_session_ref.Reset();
+#else
     session->d_session_ref.Dispose();
+    session->d_session_ref.Clear();
+#endif
 
 #if NODE_VERSION_AT_LEAST(0, 7, 9)
     uv_unref(reinterpret_cast<uv_handle_t *>(&s_async));
@@ -399,26 +554,39 @@ Session::Destroy(const Arguments& args)
     uv_unref(uv_default_loop());
 #endif
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    args.GetReturnValue().Set(scope.Escape(args.This()));
+#else
     return scope.Close(args.This());
+#endif
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::OpenService(const FunctionCallbackInfo<Value>& args)
+#else
 Handle<Value>
 Session::OpenService(const Arguments& args)
+#endif
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
     HandleScope scope;
+#endif
 
     if (args.Length() < 1 || !args[0]->IsString()) {
-        return ThrowException(Exception::Error(String::New(
-                "Service URI string must be provided as first parameter.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Service URI string must be provided as first parameter.")));
     }
     if (args.Length() < 2 || !args[1]->IsInt32()) {
-        return ThrowException(Exception::Error(String::New(
-                "Integer correlation identifier must be provided "
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Integer correlation identifier must be provided "
                 "as second parameter.")));
     }
     if (args.Length() > 2) {
-        return ThrowException(Exception::Error(String::New(
-                "Function expects at most two arguments.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Function expects at most two arguments.")));
     }
 
     Local<String> s = args[0]->ToString();
@@ -433,7 +601,12 @@ Session::OpenService(const Arguments& args)
     session->d_session->openServiceAsync(*uriv, cid);
     BLPAPI_EXCEPTION_CATCH_RETURN
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    args.GetReturnValue().Set(
+        scope.Escape(Integer::New(args.GetIsolate(), cidi)));
+#else
     return scope.Close(Integer::New(cidi));
+#endif
 }
 
 void
@@ -506,22 +679,31 @@ Session::formOptions(std::string* str, Handle<Value> value)
     *str = ss.str();
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::subscribe(const FunctionCallbackInfo<Value>& args, int action)
+#else
 Handle<Value>
 Session::subscribe(const Arguments& args, int action)
+#endif
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
     HandleScope scope;
+#endif
 
     if (args.Length() < 1 || !args[0]->IsArray()) {
-        return ThrowException(Exception::Error(String::New(
-                "Array of subscription information must be provided.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Array of subscription information must be provided.")));
     }
     if (args.Length() >= 2 && !args[1]->IsUndefined() && !args[1]->IsString()) {
-        return ThrowException(Exception::Error(String::New(
-                "Optional subscription label must be a string.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Optional subscription label must be a string.")));
     }
     if (args.Length() > 2) {
-        return ThrowException(Exception::Error(String::New(
-                "Function expects at most two arguments.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Function expects at most two arguments.")));
     }
 
     blpapi::SubscriptionList sl;
@@ -530,38 +712,38 @@ Session::subscribe(const Arguments& args, int action)
     for (std::size_t i = 0; i < Array::Cast(*(args[0]))->Length(); ++i) {
         Local<Value> v = o->Get(i);
         if (!v->IsObject()) {
-            return ThrowException(Exception::Error(String::New(
-                        "Array elements must be objects "
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Array elements must be objects "
                         "containing subscription information.")));
         }
         Local<Object> io = v->ToObject();
 
         // Process 'security' string
-        Local<Value> iv = io->Get(String::New("security"));
+        Local<Value> iv = io->Get(NEW_STRING("security"));
         if (!iv->IsString()) {
-            return ThrowException(Exception::Error(String::New(
-                        "Property 'security' must be a string.")));
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Property 'security' must be a string.")));
         }
         String::Utf8Value secv(iv);
         if (0 == secv.length()) {
-            return ThrowException(Exception::Error(String::New(
-                        "Property 'security' must be a string.")));
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Property 'security' must be a string.")));
         }
 
         // Process 'fields' array
-        iv = io->Get(String::New("fields"));
+        iv = io->Get(NEW_STRING("fields"));
         if (!iv->IsArray()) {
-            return ThrowException(Exception::Error(String::New(
-                        "Property 'fields' must be an array of strings.")));
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Property 'fields' must be an array of strings.")));
         }
         std::string fields;
         formFields(&fields, iv->ToObject());
 
         // Process 'options' array
-        iv = io->Get(String::New("options"));
+        iv = io->Get(NEW_STRING("options"));
         if (!iv->IsUndefined() && !iv->IsNull() && !iv->IsObject()) {
-            return ThrowException(Exception::Error(String::New(
-                        "Property 'options' must be an object containing "
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Property 'options' must be an object containing "
                         "whose keys and key values will be configured as "
                         "options.")));
         }
@@ -569,10 +751,10 @@ Session::subscribe(const Arguments& args, int action)
         formOptions(&options, iv);
 
         // Process 'correlation' int or string
-        iv = io->Get(String::New("correlation"));
+        iv = io->Get(NEW_STRING("correlation"));
         if (!iv->IsInt32()) {
-            return ThrowException(Exception::Error(String::New(
-                        "Property 'correlation' must be an integer.")));
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Property 'correlation' must be an integer.")));
         }
         int correlation = iv->Int32Value();
 
@@ -602,26 +784,32 @@ Session::subscribe(const Arguments& args, int action)
     }
     BLPAPI_EXCEPTION_CATCH_RETURN
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    args.GetReturnValue().Set(scope.Escape(args.This()));
+#else
     return scope.Close(args.This());
+#endif
 }
 
-Handle<Value>
-Session::Subscribe(const Arguments& args)
-{
-    return Session::subscribe(args, 0);
-}
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+# define DEFINE_WRAPPER(name, func, i)                                      \
+    void                                                                    \
+    Session::name(const FunctionCallbackInfo<Value>& args)                  \
+    {                                                                       \
+        Session::func(args, i);                                             \
+    }
+#else
+# define DEFINE_WRAPPER(name, func, i)                                      \
+    Handle<Value>                                                           \
+    Session::name(const Arguments& args)                                    \
+    {                                                                       \
+        return Session::func(args, i);                                      \
+    }
+#endif
 
-Handle<Value>
-Session::Resubscribe(const Arguments& args)
-{
-    return Session::subscribe(args, 1);
-}
-
-Handle<Value>
-Session::Unsubscribe(const Arguments& args)
-{
-    return Session::subscribe(args, 2);
-}
+DEFINE_WRAPPER(Subscribe, subscribe, 0)
+DEFINE_WRAPPER(Resubscribe, subscribe, 1)
+DEFINE_WRAPPER(Unsubscribe, subscribe, 2)
 
 static inline void
 mkdatetime(blpapi::Datetime* dt, Local<Value> val)
@@ -641,36 +829,45 @@ mkdatetime(blpapi::Datetime* dt, Local<Value> val)
     dt->setTime(tm.tm_hour, tm.tm_min, tm.tm_sec, remainder);
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::Request(const FunctionCallbackInfo<Value>& args)
+#else
 Handle<Value>
 Session::Request(const Arguments& args)
+#endif
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
     HandleScope scope;
+#endif
 
     if (args.Length() < 1 || !args[0]->IsString()) {
-        return ThrowException(Exception::Error(String::New(
-                "Service URI string must be provided as first parameter.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Service URI string must be provided as first parameter.")));
     }
     if (args.Length() < 2 || !args[1]->IsString()) {
-        return ThrowException(Exception::Error(String::New(
-                "String request name must be provided as second parameter.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "String request name must be provided as second parameter.")));
     }
     if (args.Length() < 3 || !args[2]->IsObject()) {
-        return ThrowException(Exception::Error(String::New(
-                "Object containing request parameters must be provided "
-                "as third parameter.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Object containing request parameters must be provided "
+            "as third parameter.")));
     }
     if (args.Length() < 4 || !args[3]->IsInt32()) {
-        return ThrowException(Exception::Error(String::New(
-                "Integer correlation identifier must be provided "
-                "as fourth parameter.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Integer correlation identifier must be provided "
+            "as fourth parameter.")));
     }
     if (args.Length() >= 5 && !args[4]->IsUndefined() && !args[4]->IsString()) {
-        return ThrowException(Exception::Error(String::New(
-                "Optional request label must be a string.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Optional request label must be a string.")));
     }
     if (args.Length() > 5) {
-        return ThrowException(Exception::Error(String::New(
-                "Function expects at most five arguments.")));
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Function expects at most five arguments.")));
     }
 
     int cidi = args[3]->Int32Value();
@@ -680,7 +877,7 @@ Session::Request(const Arguments& args)
     BLPAPI_EXCEPTION_TRY
 
     Local<String> uri = args[0]->ToString();
-    String::AsciiValue uriv(uri);
+    String::Utf8Value uriv(uri);
 
     blpapi::Service service = session->d_session->getService(*uriv);
 
@@ -748,11 +945,17 @@ Session::Request(const Arguments& args)
                     mkdatetime(&dt, subval);
                     request.append(*keyv, dt);
                 } else {
-                    return ThrowException(Exception::Error(String::New(
-                                "Array contains invalid value type.")));
+                    RetThrowException(Exception::Error(NEW_STRING(
+                        "Array contains invalid value type.")));
                 }
             }
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+        } else if (val->IsObject() &&
+                   key->Equals(
+                        Local<String>::New(args.GetIsolate(), s_overrides))) {
+#else
         } else if (val->IsObject() && key->Equals(s_overrides)) {
+#endif
             blpapi::Element overrides = request.getElement("overrides");
             Local<Array> subkeys = val->ToObject()->GetPropertyNames();
             for (std::size_t j = 0; j < subkeys->Length(); ++j) {
@@ -778,13 +981,13 @@ Session::Request(const Arguments& args)
                     mkdatetime(&dt, subval);
                     request.append(*subkeyv, dt);
                 } else {
-                    return ThrowException(Exception::Error(String::New(
-                                "Object 'overrides' contains invalid type.")));
+                    RetThrowException(Exception::Error(NEW_STRING(
+                        "Object 'overrides' contains invalid type.")));
                 }
             }
         } else {
-            return ThrowException(Exception::Error(String::New(
-                        "Object contains invalid value type.")));
+            RetThrowException(Exception::Error(NEW_STRING(
+                "Object contains invalid value type.")));
         }
     }
 
@@ -800,36 +1003,57 @@ Session::Request(const Arguments& args)
 
     BLPAPI_EXCEPTION_CATCH_RETURN
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    args.GetReturnValue().Set(
+        scope.Escape(Integer::New(args.GetIsolate(), cidi)));
+#else
     return scope.Close(Integer::New(cidi));
+#endif
 }
 
 Handle<Value>
-Session::elementToValue(const blpapi::Element& e)
+Session::elementToValue(Isolate *isolate, const blpapi::Element& e)
 {
     if (e.isComplexType()) {
         int numElements = e.numElements();
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+        Local<Object> o = Object::New(isolate);
+#else
         Local<Object> o = Object::New();
+#endif
         for (int i = 0; i < numElements; ++i) {
             blpapi::Element se = e.getElement(i);
             Handle<Value> sev;
             if (se.isComplexType() || se.isArray()) {
-                sev = elementToValue(se);
+                sev = elementToValue(isolate, se);
             } else {
-                sev = elementValueToValue(se);
+                sev = elementValueToValue(isolate, se);
             }
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            o->Set(String::NewFromUtf8(isolate,
+                                       se.name().string(),
+                                       String::kNormalString,
+                                       se.name().length()),
+                   sev, (PropertyAttribute)(ReadOnly | DontDelete));
+#else
             o->Set(String::New(se.name().string(), se.name().length()),
                    sev, (PropertyAttribute)(ReadOnly | DontDelete));
+#endif
         }
         return o;
     } else if (e.isArray()) {
         int numValues = e.numValues();
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+        Local<Object> o = Array::New(isolate, numValues);
+#else
         Local<Object> o = Array::New(numValues);
+#endif
         for (int i = 0; i < numValues; ++i) {
-            o->Set(i, elementValueToValue(e, i));
+            o->Set(i, elementValueToValue(isolate, e, i));
         }
         return o;
     } else {
-        return elementValueToValue(e);
+        return elementValueToValue(isolate, e);
     }
 }
 
@@ -880,39 +1104,79 @@ mkutctime(struct tm* tm)
 }
 
 Handle<Value>
-Session::elementValueToValue(const blpapi::Element& e, int idx)
+Session::elementValueToValue(Isolate *isolate,
+                             const blpapi::Element& e, int idx)
 {
     if (e.isNull())
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+        return Null(isolate);
+#else
         return Null();
+#endif
 
     switch (e.datatype()) {
         case blpapi::DataType::BOOL:
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            return Boolean::New(isolate, e.getValueAsBool(idx));
+#else
             return Boolean::New(e.getValueAsBool(idx));
+#endif
         case blpapi::DataType::CHAR: {
             char c = e.getValueAsChar(idx);
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            return String::NewFromUtf8(isolate, &c, String::kNormalString, 1);
+#else
             return String::New(&c, 1);
+#endif
         }
         case blpapi::DataType::BYTE:
         case blpapi::DataType::INT32:
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            return Integer::New(isolate, e.getValueAsInt32(idx));
+#else
             return Integer::New(e.getValueAsInt32(idx));
+#endif
         case blpapi::DataType::FLOAT32:
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            return Number::New(isolate, e.getValueAsFloat32(idx));
+#else
             return Number::New(e.getValueAsFloat32(idx));
+#endif
         case blpapi::DataType::FLOAT64:
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            return Number::New(isolate, e.getValueAsFloat64(idx));
+#else
             return Number::New(e.getValueAsFloat64(idx));
+#endif
         case blpapi::DataType::ENUMERATION: {
             blpapi::Name n = e.getValueAsName(idx);
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            return String::NewFromUtf8(isolate,
+                                       n.string(),
+                                       String::kNormalString,
+                                       n.length());
+#else
             return String::New(n.string(), n.length());
+#endif
         }
         case blpapi::DataType::INT64: {
             // IEEE754 double can represent the range [-2^53, 2^53].
             static const blpapi::Int64 MAX_DOUBLE_INT = 9007199254740992LL;
             blpapi::Int64 i = e.getValueAsInt64(idx);
             if ((i >= -MAX_DOUBLE_INT) && (i <= MAX_DOUBLE_INT))
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+                return Number::New(isolate, static_cast<double>(i));
+#else
                 return Number::New(static_cast<double>(i));
+#endif
             break;
         }
         case blpapi::DataType::STRING:
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            return String::NewFromUtf8(isolate, e.getValueAsString(idx));
+#else
             return String::New(e.getValueAsString(idx));
+#endif
         case blpapi::DataType::DATE: {
             blpapi::Datetime dt = e.getValueAsDatetime(idx);
             if (dt.hasParts(blpapi::DatetimeParts::DATE)) {
@@ -928,7 +1192,11 @@ Session::elementValueToValue(const blpapi::Element& e, int idx)
                 date.tm_isdst = 0;
                 time_t sec = mkutctime(&date);
                 double ms = sec * 1000.0L;
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+                return Date::New(isolate, ms);
+#else
                 return Date::New(ms);
+#endif
             }
             break;
         }
@@ -948,7 +1216,11 @@ Session::elementValueToValue(const blpapi::Element& e, int idx)
                 double ms = sec * 1000.0L;
                 if (dt.hasParts(blpapi::DatetimeParts::FRACSECONDS))
                     ms += dt.milliSeconds();
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+                return Date::New(isolate, ms);
+#else
                 return Date::New(ms);
+#endif
             }
             break;
         }
@@ -984,23 +1256,35 @@ Session::elementValueToValue(const blpapi::Element& e, int idx)
             double ms = sec * 1000.0L;
             if (dt.hasParts(blpapi::DatetimeParts::FRACSECONDS))
                 ms += dt.milliSeconds();
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            return Date::New(isolate, ms);
+#else
             return Date::New(ms);
+#endif
         }
         case blpapi::DataType::SEQUENCE:
-            return elementToValue(e.getValueAsElement(idx));
+            return elementToValue(isolate, e.getValueAsElement(idx));
         default:
             break;
     }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    return Null(isolate);
+#else
     return Null();
+#endif
 }
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
 #define EVENT_TO_STRING(e) \
-    case blpapi::Event::e : \
-        return String::New(#e)
+    case blpapi::Event::e : return String::NewFromUtf8(isolate, #e)
+#else
+#define EVENT_TO_STRING(e) \
+    case blpapi::Event::e : return String::New(#e)
+#endif
 
 static inline Handle<Value>
-eventTypeToString(blpapi::Event::EventType et)
+eventTypeToString(Isolate *isolate, blpapi::Event::EventType et)
 {
     switch (et) {
         EVENT_TO_STRING(ADMIN);
@@ -1019,57 +1303,121 @@ eventTypeToString(blpapi::Event::EventType et)
         EVENT_TO_STRING(REQUEST);
         EVENT_TO_STRING(UNKNOWN);
     }
-    return ThrowException(Exception::Error(String::New(
-                "Invalid event type.")));
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    return isolate->ThrowException(Exception::Error(
+                String::NewFromUtf8(isolate, "Invalid event type.")));
+#else
+    return ThrowException(Exception::Error(
+                String::New("Invalid event type.")));
+#endif
 }
 
 void
-Session::processMessage(blpapi::Event::EventType et, const blpapi::Message& msg)
+Session::processMessage(Isolate *isolate,
+                        blpapi::Event::EventType et,
+                        const blpapi::Message& msg)
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    HandleScope scope(isolate);
+#else
+    HandleScope scope;
+#endif
+
     Handle<Value> argv[2];
 
     const blpapi::Name& messageType = msg.messageType();
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    argv[0] = String::NewFromUtf8(isolate,
+                                  messageType.string(),
+                                  String::kNormalString,
+                                  messageType.length());
+#else
     argv[0] = String::New(messageType.string(), messageType.length());
+#endif
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    Local<Object> o = Object::New(isolate);
+    o->Set(Local<String>::New(isolate, s_event_type),
+           eventTypeToString(isolate, et),
+           (PropertyAttribute)(ReadOnly | DontDelete));
+    o->Set(Local<String>::New(isolate, s_message_type),
+           argv[0],
+           (PropertyAttribute)(ReadOnly | DontDelete));
+    o->Set(Local<String>::New(isolate, s_topic_name),
+           String::NewFromUtf8(isolate, msg.topicName()),
+           (PropertyAttribute)(ReadOnly | DontDelete));
+#else
     Local<Object> o = Object::New();
-
-    o->Set(s_event_type, eventTypeToString(et),
+    o->Set(s_event_type, eventTypeToString(isolate, et),
            (PropertyAttribute)(ReadOnly | DontDelete));
     o->Set(s_message_type, argv[0],
            (PropertyAttribute)(ReadOnly | DontDelete));
-    o->Set(s_topic_name, String::New(msg.topicName()),
+    o->Set(s_topic_name, NEW_STRING(msg.topicName()),
            (PropertyAttribute)(ReadOnly | DontDelete));
+#endif
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    Local<Array> correlations = Array::New(isolate, msg.numCorrelationIds());
+#else
     Local<Array> correlations = Array::New(msg.numCorrelationIds());
+#endif
     for (int i = 0, j = 0; i < msg.numCorrelationIds(); ++i) {
         blpapi::CorrelationId cid = msg.correlationId(i);
         // Only pack user-specified integers and auto-generated
         // values into the correlations array returned to the user.
         if (cid.valueType() == blpapi::CorrelationId::INT_VALUE ||
             cid.valueType() == blpapi::CorrelationId::AUTOGEN_VALUE) {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            Local<Object> cido = Object::New(isolate);
+            cido->Set(Local<String>::New(isolate, s_value),
+                      Integer::New(isolate, (int)cid.asInteger()));
+            cido->Set(Local<String>::New(isolate, s_class_id),
+                      Integer::New(isolate, cid.classId()));
+#else
             Local<Object> cido = Object::New();
             cido->Set(s_value, Integer::New((int)cid.asInteger()));
             cido->Set(s_class_id, Integer::New(cid.classId()));
+#endif
             correlations->Set(j++, cido);
         } else {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+            correlations->Set(j++, Object::New(isolate));
+#else
             correlations->Set(j++, Object::New());
+#endif
         }
     }
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    o->Set(Local<String>::New(isolate, s_correlations),
+           correlations, (PropertyAttribute)(ReadOnly | DontDelete));
+
+    o->Set(Local<String>::New(isolate, s_data),
+           elementToValue(isolate, msg.asElement()));
+#else
     o->Set(s_correlations, correlations,
            (PropertyAttribute)(ReadOnly | DontDelete));
 
-    o->Set(s_data, elementToValue(msg.asElement()));
+    o->Set(s_data, elementToValue(isolate, msg.asElement()));
+#endif
 
     argv[1] = o;
 
-    this->emit(sizeof(argv) / sizeof(argv[0]), argv);
+    this->emit(isolate, sizeof(argv) / sizeof(argv[0]), argv);
 }
 
 void
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+Session::processEvents(uv_async_t *async)
+#else
 Session::processEvents(uv_async_t *async, int status)
+#endif
 {
+    Isolate *isolate = Isolate::GetCurrent();
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    HandleScope scope(isolate);
+#else
     HandleScope scope;
-
+#endif
     Session *session = reinterpret_cast<Session *>(async->data);
 
     bool empty;
@@ -1090,7 +1438,7 @@ Session::processEvents(uv_async_t *async, int status)
         blpapi::MessageIterator msgIter(ev);
         while (msgIter.next()) {
             const blpapi::Message& msg = msgIter.message();
-            session->processMessage(ev.eventType(), msg);
+            session->processMessage(isolate, ev.eventType(), msg);
         }
 
         // Reacquire and pop, updating empty flag to having to
@@ -1118,12 +1466,21 @@ Session::processEvent(const blpapi::Event& ev, blpapi::Session* session)
 }
 
 void
-Session::emit(int argc, Handle<Value> argv[])
+Session::emit(Isolate *isolate, int argc, Handle<Value> argv[])
 {
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    HandleScope scope(isolate);
+    Local<Function> emit =
+        Local<Function>::Cast(
+                handle(isolate)->Get(Local<String>::New(isolate, s_emit)));
+    node::MakeCallback(isolate,
+                       isolate->GetCurrentContext()->Global(),
+                       emit, argc, argv);
+#else
     HandleScope scope;
-
     Local<Function> emit = Local<Function>::Cast(handle_->Get(s_emit));
     emit->Call(handle_, argc, argv);
+#endif
 }
 
 }   // close namespace blpapijs
