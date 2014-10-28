@@ -146,17 +146,6 @@ private:
     void emit(Isolate *isolate, int argc, Handle<Value> argv[]);
 
     static uv_async_t s_async;
-#if NODE_VERSION_AT_LEAST(0, 11, 0)
-    static Persistent<Symbol> s_emit;
-    static Persistent<Symbol> s_event_type;
-    static Persistent<Symbol> s_message_type;
-    static Persistent<Symbol> s_topic_name;
-    static Persistent<Symbol> s_correlations;
-    static Persistent<Symbol> s_value;
-    static Persistent<Symbol> s_class_id;
-    static Persistent<Symbol> s_data;
-    static Persistent<Symbol> s_overrides;
-#else
     static Persistent<String> s_emit;
     static Persistent<String> s_event_type;
     static Persistent<String> s_message_type;
@@ -166,7 +155,6 @@ private:
     static Persistent<String> s_class_id;
     static Persistent<String> s_data;
     static Persistent<String> s_overrides;
-#endif
 
     Isolate *d_isolate;
     blpapi::SessionOptions d_options;
@@ -180,17 +168,6 @@ private:
 };
 
 uv_async_t Session::s_async;
-#if NODE_VERSION_AT_LEAST(0, 11, 0)
-Persistent<Symbol> Session::s_emit;
-Persistent<Symbol> Session::s_event_type;
-Persistent<Symbol> Session::s_message_type;
-Persistent<Symbol> Session::s_topic_name;
-Persistent<Symbol> Session::s_correlations;
-Persistent<Symbol> Session::s_value;
-Persistent<Symbol> Session::s_class_id;
-Persistent<Symbol> Session::s_data;
-Persistent<Symbol> Session::s_overrides;
-#else
 Persistent<String> Session::s_emit;
 Persistent<String> Session::s_event_type;
 Persistent<String> Session::s_message_type;
@@ -200,7 +177,6 @@ Persistent<String> Session::s_value;
 Persistent<String> Session::s_class_id;
 Persistent<String> Session::s_data;
 Persistent<String> Session::s_overrides;
-#endif
 
 Session::Session(
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
@@ -279,8 +255,8 @@ Session::Initialize(Handle<Object> target)
 #endif
 
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
-# define NODE_PSYMBOL(x) \
-    Symbol::New(isolate, String::NewFromUtf8(isolate, x))
+#define NODE_PSYMBOL(x) \
+    String::NewFromUtf8(isolate, x, String::kInternalizedString)
     s_emit.Reset(isolate, NODE_PSYMBOL("emit"));
     s_event_type.Reset(isolate, NODE_PSYMBOL("eventType"));
     s_message_type.Reset(isolate, NODE_PSYMBOL("messageType"));
@@ -974,8 +950,8 @@ Session::Request(const Arguments& args)
             }
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
         } else if (val->IsObject() &&
-                   key->Equals(Local<Symbol>::New(args.GetIsolate(),
-                                                  s_overrides))) {
+                   key->Equals(
+                        Local<String>::New(args.GetIsolate(), s_overrides))) {
 #else
         } else if (val->IsObject() && key->Equals(s_overrides)) {
 #endif
@@ -1354,12 +1330,13 @@ Session::processMessage(blpapi::Event::EventType et,
 
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
     Local<Object> o = Object::New(isolate);
-    o->Set(Local<Symbol>::New(isolate, s_event_type), 
+    o->Set(Local<String>::New(isolate, s_event_type),
            eventTypeToString(isolate, et),
            (PropertyAttribute)(ReadOnly | DontDelete));
-    o->Set(Local<Symbol>::New(isolate, s_message_type), argv[0],
+    o->Set(Local<String>::New(isolate, s_message_type),
+           argv[0],
            (PropertyAttribute)(ReadOnly | DontDelete));
-    o->Set(Local<Symbol>::New(isolate, s_topic_name),
+    o->Set(Local<String>::New(isolate, s_topic_name),
            String::NewFromUtf8(isolate, msg.topicName()),
            (PropertyAttribute)(ReadOnly | DontDelete));
 #else
@@ -1385,9 +1362,9 @@ Session::processMessage(blpapi::Event::EventType et,
             cid.valueType() == blpapi::CorrelationId::AUTOGEN_VALUE) {
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
             Local<Object> cido = Object::New(isolate);
-            cido->Set(Local<Symbol>::New(isolate, s_value),
+            cido->Set(Local<String>::New(isolate, s_value),
                       Integer::New(isolate, (int)cid.asInteger()));
-            cido->Set(Local<Symbol>::New(isolate, s_class_id),
+            cido->Set(Local<String>::New(isolate, s_class_id),
                       Integer::New(isolate, cid.classId()));
 #else
             Local<Object> cido = Object::New();
@@ -1404,10 +1381,10 @@ Session::processMessage(blpapi::Event::EventType et,
         }
     }
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
-    o->Set(Local<Symbol>::New(isolate, s_correlations),
+    o->Set(Local<String>::New(isolate, s_correlations),
            correlations, (PropertyAttribute)(ReadOnly | DontDelete));
 
-    o->Set(Local<Symbol>::New(isolate, s_data),
+    o->Set(Local<String>::New(isolate, s_data),
            elementToValue(isolate, msg.asElement()));
 #else
     o->Set(s_correlations, correlations,
@@ -1482,10 +1459,13 @@ void
 Session::emit(Isolate *isolate, int argc, Handle<Value> argv[])
 {
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
+    HandleScope scope(isolate);
+    Local<Function> emit =
+        Local<Function>::Cast(
+                handle(isolate)->Get(Local<String>::New(isolate, s_emit)));
     node::MakeCallback(isolate,
-                       Undefined(isolate)->ToObject(),
-                       Local<Symbol>::New(isolate, s_emit)->ToString(),
-                       argc, argv);
+                       isolate->GetCurrentContext()->Global(),
+                       emit, argc, argv);
 #else
     HandleScope scope;
     Local<Function> emit = Local<Function>::Cast(handle_->Get(s_emit));
