@@ -140,7 +140,8 @@ private:
 #else
     static void processEvents(uv_async_t *async, int status);
 #endif
-    void processMessage(blpapi::Event::EventType et,
+    void processMessage(Isolate *isolate,
+                        blpapi::Event::EventType et,
                         const blpapi::Message& msg);
 
     void emit(Isolate *isolate, int argc, Handle<Value> argv[]);
@@ -1312,10 +1313,16 @@ eventTypeToString(Isolate *isolate, blpapi::Event::EventType et)
 }
 
 void
-Session::processMessage(blpapi::Event::EventType et,
+Session::processMessage(Isolate *isolate,
+                        blpapi::Event::EventType et,
                         const blpapi::Message& msg)
 {
-    Isolate *isolate = Isolate::GetCurrent();
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    HandleScope scope(isolate);
+#else
+    HandleScope scope;
+#endif
+
     Handle<Value> argv[2];
 
     const blpapi::Name& messageType = msg.messageType();
@@ -1405,7 +1412,10 @@ Session::processEvents(uv_async_t *async)
 Session::processEvents(uv_async_t *async, int status)
 #endif
 {
-#if !NODE_VERSION_AT_LEAST(0, 11, 0)
+    Isolate *isolate = Isolate::GetCurrent();
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    HandleScope scope(isolate);
+#else
     HandleScope scope;
 #endif
     Session *session = reinterpret_cast<Session *>(async->data);
@@ -1428,7 +1438,7 @@ Session::processEvents(uv_async_t *async, int status)
         blpapi::MessageIterator msgIter(ev);
         while (msgIter.next()) {
             const blpapi::Message& msg = msgIter.message();
-            session->processMessage(ev.eventType(), msg);
+            session->processMessage(isolate, ev.eventType(), msg);
         }
 
         // Reacquire and pop, updating empty flag to having to
