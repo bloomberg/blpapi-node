@@ -3,13 +3,13 @@
     {
       'target_name': 'blpapijs',
       'sources': [ 'blpapijs.cpp' ],
-      'include_dirs': [
-        '<(module_root_dir)/deps/blpapi/include'
-      ],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
       'conditions': [
         ['OS=="win"', {
+          'include_dirs': [
+            '<(module_root_dir)/deps/blpapi/include-3.7.9.1'
+          ],
           'msvs_settings': {
             'VCCLCompilerTool': {
               'AdditionalOptions': [ '/EHsc' ]
@@ -29,6 +29,9 @@
           ]
         }],
         ['OS=="linux"', {
+          'include_dirs': [
+            '<(module_root_dir)/deps/blpapi/include-3.7.9.1'
+          ],
           'ldflags': [
             '-Wl,-R<(module_root_dir)/deps/blpapi/linux',
             '-L<(module_root_dir)/deps/blpapi/linux'
@@ -43,6 +46,9 @@
           ]
         }],
         ['OS=="mac"', {
+          'include_dirs': [
+            '<(module_root_dir)/deps/blpapi/include-3.8.1.1'
+          ],
           'ldflags': [
             '-Wl,-rpath,<(module_root_dir)/deps/blpapi/osx',
             '-L<(module_root_dir)/deps/blpapi/osx'
