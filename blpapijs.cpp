@@ -166,6 +166,8 @@ private:
     uv_mutex_t d_que_mutex;
     bool d_started;
     bool d_stopped;
+    bool d_dispatching;
+    bool d_destroy;
 };
 
 uv_async_t Session::s_async;
@@ -192,6 +194,8 @@ Session::Session(
 #endif
     , d_started(false)
     , d_stopped(false)
+    , d_dispatching(false)
+    , d_destroy(false)
 {
     d_options.setServerHost(serverHost.c_str());
     d_options.setServerPort(serverPort);
@@ -216,6 +220,14 @@ Session::~Session()
     // Ref on the event loop is released in Destroy
 
     uv_mutex_destroy(&d_que_mutex);
+
+    // If the `Session` object in Javascript is collected without `stop()`
+    // or `destroy()` being called, the underlying `blpapi::Session` still
+    // needs to be cleaned up.
+    if (d_session) {
+        delete d_session;
+        d_session = NULL;
+    }
 }
 
 void
@@ -368,6 +380,10 @@ Session::Start(const Arguments& args)
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
     if (session->d_started) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Session has already been started.")));
@@ -429,6 +445,11 @@ Session::Authorize(const Arguments& args)
     int cidi = args[1]->Int32Value();
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
+
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
 
     BLPAPI_EXCEPTION_TRY
 
@@ -494,6 +515,10 @@ Session::Stop(const Arguments& args)
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
     if (!session->d_started) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Session has not been started.")));
@@ -532,6 +557,10 @@ Session::Destroy(const Arguments& args)
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
     if (!session->d_started) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Session has not been started.")));
@@ -553,6 +582,17 @@ Session::Destroy(const Arguments& args)
 #else
     uv_unref(uv_default_loop());
 #endif
+
+    // The `blpapi::Session` can not be deleted from within a dispatch
+    // loop while a `MessageIterator` still exists.  Instead, indicate
+    // it should be destroyed after the dispatching function exits the
+    // loop.
+    if (session->d_dispatching) {
+        session->d_destroy = true;
+    } else {
+        delete session->d_session;
+        session->d_session = NULL;
+    }
 
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
     args.GetReturnValue().Set(scope.Escape(args.This()));
@@ -596,6 +636,11 @@ Session::OpenService(const Arguments& args)
     blpapi::CorrelationId cid(cidi);
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
+
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
 
     BLPAPI_EXCEPTION_TRY
     session->d_session->openServiceAsync(*uriv, cid);
@@ -764,6 +809,11 @@ Session::subscribe(const Arguments& args, int action)
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
+
     BLPAPI_EXCEPTION_TRY
     if (args.Length() == 2) {
         Local<String> s = args[1]->ToString();
@@ -873,6 +923,11 @@ Session::Request(const Arguments& args)
     int cidi = args[3]->Int32Value();
 
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
+
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
 
     BLPAPI_EXCEPTION_TRY
 
@@ -1422,30 +1477,54 @@ Session::processEvents(uv_async_t *async, int status)
 
     bool empty;
     do {
-        // Determine if the queue is empty
-        uv_mutex_lock(&session->d_que_mutex);
-        empty = session->d_que.empty();
-        if (empty) {
+        {
+            // Create a block scope to ensure the `MessageIterator` is
+            // destroyed before potentially destroying the `Session`.
+
+            // Determine if the queue is empty
+            uv_mutex_lock(&session->d_que_mutex);
+            empty = session->d_que.empty();
+            if (empty) {
+                uv_mutex_unlock(&session->d_que_mutex);
+                break;
+            }
+
+            // Keep the lock and release once the head is retrieved
+            const blpapi::Event& ev = session->d_que.front();
             uv_mutex_unlock(&session->d_que_mutex);
-            break;
-        }
 
-        // Keep the lock and release once the head is retrieved
-        const blpapi::Event& ev = session->d_que.front();
-        uv_mutex_unlock(&session->d_que_mutex);
-
-        // Iterate over contained messages without holding lock
-        blpapi::MessageIterator msgIter(ev);
-        while (msgIter.next()) {
-            const blpapi::Message& msg = msgIter.message();
-            session->processMessage(isolate, ev.eventType(), msg);
+            // Iterate over contained messages without holding lock
+            blpapi::MessageIterator msgIter(ev);
+            while (msgIter.next()) {
+                const blpapi::Message& msg = msgIter.message();
+                // Indicate a message is being dispatched and break if
+                // the callback winds up destroying the session.  The
+                // session can not be directly destroyed in `::Destroy`
+                // because the `MessageIterator` requires the session
+                // to still exist.
+                session->d_dispatching = true;
+                session->processMessage(isolate, ev.eventType(), msg);
+                session->d_dispatching = false;
+                if (session->d_destroy)
+                    break;
+            }
         }
 
         // Reacquire and pop, updating empty flag to having to
         // loop and acquire the mutex for a second time.
         uv_mutex_lock(&session->d_que_mutex);
-        session->d_que.pop_front();
-        empty = session->d_que.empty();
+        if (session->d_destroy) {
+            // Drain the queue, as `Event` release requires `Session`
+            session->d_que.clear();
+            empty = true;
+            // Destroy the `blpapi::Session`
+            delete session->d_session;
+            session->d_session = NULL;
+            session->d_destroy = false;
+        } else {
+            session->d_que.pop_front();
+            empty = session->d_que.empty();
+        }
         uv_mutex_unlock(&session->d_que_mutex);
     } while (!empty);
 }
