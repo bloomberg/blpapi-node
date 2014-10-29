@@ -6,7 +6,7 @@ blpapi-node
 
 Find source code in the [Github repository].
 
-[Bloomberg Open API]: http://openbloomberg.com/open-api
+[Bloomberg Open API]: http://www.bloomberglabs.com/api/about/
 [Node.js]: http://nodejs.org
 [Github repository]: https://github.com/bloomberg/blpapi-node
 
@@ -24,9 +24,12 @@ This module requires:
 
 This module includes:
 
-+ [Bloomberg BLPAPI C++ SDK] v3.7.5.1 (Linux/Windows/Mac OS X)
++ [Bloomberg BLPAPI C++ SDK] v3.7.9.1 (Linux/Windows)
++ [Bloomberg BLPAPI C++ SDK] v3.8.1.1 (Mac OS X)
 
-[Bloomberg BLPAPI C++ SDK]: http://openbloomberg.com/open-api
+**Note:** Mac OS X users can only connect to SAPI or [B-PIPE] products.
+
+[Bloomberg BLPAPI C++ SDK]: http://www.bloomberglabs.com/api/libraries/
 [B-PIPE]: http://www.bloomberg.com/enterprise/enterprise_products/data_optimization/data_feeds
 
 Installation
@@ -66,7 +69,7 @@ functionality.
 Full examples contained in the `examples` directory demonstrate how to
 use most SDK functionality.  Full descriptions of all availabe requests,
 responses, and options are contained within the BLPAPI API
-[Developer Guide](http://www.openbloomberg.com/files/2012/03/blpapi-developers-guide.pdf).
+[Developer Guide](http://www.bloomberglabs.com/api/documentation/).
 
 
 ### Opening A Session ###
