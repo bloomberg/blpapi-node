@@ -1381,6 +1381,9 @@ Session::processMessage(Isolate *isolate,
     Handle<Value> argv[2];
 
     const blpapi::Name& messageType = msg.messageType();
+    if ("SessionTerminated" == messageType) {
+        d_stopped = true;
+    }
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
     argv[0] = String::NewFromUtf8(isolate,
                                   messageType.string(),
