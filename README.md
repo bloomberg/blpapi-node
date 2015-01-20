@@ -67,7 +67,7 @@ developer's guide should serve as the main guide for the module's
 functionality.
 
 Full examples contained in the `examples` directory demonstrate how to
-use most SDK functionality.  Full descriptions of all availabe requests,
+use most SDK functionality.  Full descriptions of all available requests,
 responses, and options are contained within the BLPAPI API
 [Developer Guide](http://www.bloomberglabs.com/api/documentation/).
 
@@ -116,6 +116,78 @@ responses, and options are contained within the BLPAPI API
             // AAPL US Equity LAST_TRADE 601.00
             // GOOG US Equity LAST_TRADE 650.00
             // ...
+        }
+    });
+
+### Creating An Authorized Identity ###
+
+Some session configurations, for example when connecting to a B-PIPE, may
+require calls to `request` and `subscribe` to specify an authorized Identity.
+The `authorizeUser` function performs an `AuthorizationRequest` on the
+`//blp/apiauth`. This function differs slightly from the BLPAPI SDK design in
+two ways. First, rather than having separate response events for success and
+failure, it emits the `AuthorizationResponse` event for both. Second, the
+`Identity` object is returned via the response as `data.identity`. This is only
+set for successful authorization, so its presence or absence can be used to
+determine whether the `AuthorizationResponse` indicates success or failure.
+`data.identity` is an opaque object representing the authorized user. Its only
+use is to be passed to `request` and `subscribe`.
+
+    var auth_service_id = 2;
+    var token_correlation_id = 3;
+    var identity_correlation_id = 4;
+
+    session.on('SessionStarted', function(m) {
+        session.openService('//blp/apiauth', auth_service_id);
+    });
+
+    session.on('ServiceOpened', function(m) {
+        if (m.correlations[0].value == auth_service_id) {
+            // Request a token to be sent to you via MSG.
+            session.request('//blp/apiauth', 'AuthorizationTokenRequest',
+                { uuid: 12345678, label: 'testApp' }, token_correlation_id);
+        }
+    });
+
+    session.on('AuthorizationTokenResponse', function(m) {
+        if (m.correlations[0].value == token_correlation_id) {
+            // Request the identity
+            session.authorizeUser({ uuid: 12345678, token: 'token from MSG' },
+                identity_correlation_id);
+        }
+    });
+
+    session.on('AuthorizationResponse', function(m) {
+        if (m.correlations[0].value == identity_correlation_id) {
+            if (m.data.hasOwnProperty('identity') {
+                // Authorization successful;
+                // Save m.data.identity for use with later requests.
+            }
+        }
+    });
+
+### Using An Authorized Identity To Make A Request ###
+
+    var identity;  // Assumed to be set by a previous AuthorizationResponse
+
+    var refdata_service_id = 5;
+    var refdata_correlation_id = 6;
+
+    session.on('SessionStarted', function(m) {
+        session.openService('//blp/refdata', refdata_service_id);
+    });
+
+    session.on('ServiceOpened', function(m) {
+        if (m.correlations[0].value == refdata_service_id) {
+            session.request('//blp/refdata', 'ReferenceDataRequest',
+                { securities: ['IBM US Equity'], fields: [PX_LAST'] },
+                refdata_correlation_id, identity);
+        }
+    });
+
+    session.on('ReferenceDataResponse', function(m) {
+        if (m.correlations[0].value == refdata_correlation_id) {
+             console.log(m.data);
         }
     });
 

@@ -22,6 +22,7 @@
 #include <blpapi_defs.h>
 
 #include <deque>
+#include <map>
 #include <sstream>
 
 #include <cmath>
@@ -181,6 +182,91 @@ int loadRequest(blpapi::Request *request,
 
 }  // close anonymous namespace
 
+                               // ==============
+                               // class Identity
+                               // ==============
+
+// The Identity object is opaque to js code: it's part of the authentication
+// response and passed back in to subsequent requests, with no other operations
+// allowed.
+class Identity : public ObjectWrap {
+  private:
+    // CLASS DATA
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    static Eternal<ObjectTemplate> s_objectTemplate;
+#else
+    static Persistent<ObjectTemplate> s_objectTemplate;
+#endif
+    // DATA
+    blpapi::Identity d_identity;
+
+    // PRIVATE CREATORS
+    Identity(const blpapi::Identity& identity);
+
+  public:
+    // CLASS METHODS
+    static void Initialize(Handle<Object> target);
+
+    static Local<Object> New(Isolate                 *isolate,
+                             const blpapi::Identity&  identity);
+
+    // ACCESSORS
+    const blpapi::Identity* getIdentity() const;
+};
+
+                               // --------------
+                               // class Identity
+                               // --------------
+
+// CLASS DATA
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+Eternal<ObjectTemplate> Identity::s_objectTemplate;
+#else
+Persistent<ObjectTemplate> Identity::s_objectTemplate;
+#endif
+
+// PRIVATE CREATORS
+Identity::Identity(const blpapi::Identity& identity)
+: d_identity(identity)
+{
+}
+
+// CLASS METHODS
+void Identity::Initialize(Handle<Object> target)
+{
+    Local<ObjectTemplate> objectTemplate;
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    Isolate *isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
+    objectTemplate = ObjectTemplate::New(isolate);
+    s_objectTemplate.Set(isolate, objectTemplate);
+#else
+    HandleScope scope;
+    objectTemplate = ObjectTemplate::New();
+    s_objectTemplate = Persistent<ObjectTemplate>::New(objectTemplate);
+#endif
+    objectTemplate->SetInternalFieldCount(1);
+}
+
+Local<Object> Identity::New(Isolate *isolate, const blpapi::Identity& identity)
+{
+    Local<Object> object;
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    object = s_objectTemplate.Get(isolate)->NewInstance();
+#else
+    object = s_objectTemplate->NewInstance();
+#endif
+    Identity *id = new Identity(identity);
+    id->Wrap(object);
+    return object;
+}
+
+// ACCESSORS
+const blpapi::Identity* Identity::getIdentity() const
+{
+    return &d_identity;
+}
+
 class Session : public ObjectWrap,
                 public blpapi::EventHandler {
 public:
@@ -200,6 +286,7 @@ public:
 
     static void Start(const FunctionCallbackInfo<Value>& args);
     static void Authorize(const FunctionCallbackInfo<Value>& args);
+    static void AuthorizeUser(const FunctionCallbackInfo<Value>& args);
     static void Stop(const FunctionCallbackInfo<Value>& args);
     static void Destroy(const FunctionCallbackInfo<Value>& args);
     static void OpenService(const FunctionCallbackInfo<Value>& args);
@@ -212,6 +299,7 @@ public:
 
     static Handle<Value> Start(const Arguments& args);
     static Handle<Value> Authorize(const Arguments& args);
+    static Handle<Value> AuthorizeUser(const Arguments& args);
     static Handle<Value> Stop(const Arguments& args);
     static Handle<Value> Destroy(const Arguments& args);
     static Handle<Value> OpenService(const Arguments& args);
@@ -239,6 +327,13 @@ private:
                                              const blpapi::Element& e,
                                              int idx = 0);
 
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    const blpapi::Identity* getIdentity(const FunctionCallbackInfo<Value>& args,
+                                        int index);
+#else
+    const blpapi::Identity* getIdentity(const Arguments& args, int index);
+#endif
+
     bool processEvent(const blpapi::Event& ev, blpapi::Session* session);
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
     static void processEvents(uv_async_t *async);
@@ -260,7 +355,7 @@ private:
     static Persistent<String> s_value;
     static Persistent<String> s_class_id;
     static Persistent<String> s_data;
-    static Persistent<String> s_overrides;
+    static Persistent<String> s_identity;
 
     Isolate *d_isolate;
     blpapi::SessionOptions d_options;
@@ -268,6 +363,7 @@ private:
     blpapi::Identity d_identity;
     Persistent<Object> d_session_ref;
     std::deque<blpapi::Event> d_que;
+    std::map<int, blpapi::Identity> d_identities;
     uv_mutex_t d_que_mutex;
     bool d_started;
     bool d_stopped;
@@ -284,7 +380,7 @@ Persistent<String> Session::s_correlations;
 Persistent<String> Session::s_value;
 Persistent<String> Session::s_class_id;
 Persistent<String> Session::s_data;
-Persistent<String> Session::s_overrides;
+Persistent<String> Session::s_identity;
 
 Session::Session(
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
@@ -351,6 +447,7 @@ Session::Initialize(Handle<Object> target)
 
     NODE_SET_PROTOTYPE_METHOD(t, "start", Start);
     NODE_SET_PROTOTYPE_METHOD(t, "authorize", Authorize);
+    NODE_SET_PROTOTYPE_METHOD(t, "authorizeUser", AuthorizeUser);
     NODE_SET_PROTOTYPE_METHOD(t, "stop", Stop);
     NODE_SET_PROTOTYPE_METHOD(t, "destroy", Destroy);
     NODE_SET_PROTOTYPE_METHOD(t, "openService", OpenService);
@@ -383,7 +480,7 @@ Session::Initialize(Handle<Object> target)
     s_value.Reset(isolate, NODE_PSYMBOL("value"));
     s_class_id.Reset(isolate, NODE_PSYMBOL("classId"));
     s_data.Reset(isolate, NODE_PSYMBOL("data"));
-    s_overrides.Reset(isolate, NODE_PSYMBOL("overrides"));
+    s_identity.Reset(isolate, NODE_PSYMBOL("identity"));
 #undef NODE_PSYMBOL
 #else
     s_emit = NODE_PSYMBOL("emit");
@@ -394,7 +491,7 @@ Session::Initialize(Handle<Object> target)
     s_value = NODE_PSYMBOL("value");
     s_class_id = NODE_PSYMBOL("classId");
     s_data = NODE_PSYMBOL("data");
-    s_overrides = NODE_PSYMBOL("overrides");
+    s_identity = NODE_PSYMBOL("identity");
 #endif
 }
 
@@ -516,6 +613,10 @@ Session::Start(const Arguments& args)
 #endif
 }
 
+/**
+ * Set the default identity to use when a request/subscription does not
+ * specify the identity to use.
+ */
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
 void
 Session::Authorize(const FunctionCallbackInfo<Value>& args)
@@ -585,20 +686,90 @@ Session::Authorize(const Arguments& args)
     }
 
     blpapi::Service authService = session->d_session->getService(*uriv);
-    blpapi::Request authRequest = authService.createAuthorizationRequest();
+    blpapi::Request authRequest = authService.createAuthorizationRequest(
+                                                       "AuthorizationRequest");
     authRequest.set("token", token.c_str());
 
     session->d_identity = session->d_session->createIdentity();
 
     blpapi::CorrelationId cid(cidi);
     session->d_session->sendAuthorizationRequest(authRequest,
-                                                 &session->d_identity, cid);
+                                                 &session->d_identity,
+                                                 cid);
 
     BLPAPI_EXCEPTION_CATCH_RETURN
 
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
     args.GetReturnValue().Set(
         scope.Escape(Integer::New(args.GetIsolate(), cidi)));
+#else
+    return scope.Close(Integer::New(cidi));
+#endif
+}
+
+/**
+ * Create a new Identity object and send an authorization request for it.
+ * If the authorization request succeeds, the wrapped Identity object is
+ * in the response as data.identity.
+ */
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+void
+Session::AuthorizeUser(const FunctionCallbackInfo<Value>& args)
+#else
+Handle<Value>
+Session::AuthorizeUser(const Arguments& args)
+#endif
+{
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    EscapableHandleScope scope(args.GetIsolate());
+#else
+    HandleScope scope;
+#endif
+    if (args.Length() < 1 || !args[0]->IsObject()) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Object containing auth request parameters must be provided as "
+            "first parameter.")));
+    }
+    if (args.Length() < 2 || !args[1]->IsInt32()) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Integer correlation identifier must be provided as second "
+            "parameter.")));
+    }
+    if (args.Length() > 2) {
+        RetThrowException(Exception::Error(NEW_STRING(
+                                  "Function expects at most two arguments.")));
+    }
+
+    int cidi = args[1]->Int32Value();
+
+    Session *session = ObjectWrap::Unwrap<Session>(args.This());
+
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+                                      "Session has already been destroyed.")));
+    }
+
+    BLPAPI_EXCEPTION_TRY
+
+    blpapi::Service service = session->d_session->getService("//blp/apiauth");
+    blpapi::Request request(service.createAuthorizationRequest(
+                                                      "AuthorizationRequest"));
+    std::string error;
+    if (loadRequest(&request, args[0], &error)) {
+        RetThrowException(Exception::Error(NEW_STRING(error.c_str())));
+    }
+    blpapi::CorrelationId cid(cidi);
+    // We need to insert the completed Identity object into the response,
+    // so we store it here.
+    blpapi::Identity& identity = session->d_identities[cidi]
+        = session->d_session->createIdentity();
+    session->d_session->sendAuthorizationRequest(request, &identity, cid);
+
+    BLPAPI_EXCEPTION_CATCH_RETURN
+
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+    args.GetReturnValue().Set(scope.Escape(Integer::New(args.GetIsolate(),
+                                                        cidi)));
 #else
     return scope.Close(Integer::New(cidi));
 #endif
@@ -622,15 +793,15 @@ Session::Stop(const Arguments& args)
 
     if (!session->d_session || session->d_destroy) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Session has already been destroyed.")));
+                                      "Session has already been destroyed.")));
     }
     if (!session->d_started) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Session has not been started.")));
+                                            "Session has not been started.")));
     }
     if (session->d_stopped) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Session has already been stopped.")));
+                                        "Session has already been stopped.")));
     }
 
     session->d_stopped = true;
@@ -847,13 +1018,17 @@ Session::subscribe(const Arguments& args, int action)
         RetThrowException(Exception::Error(NEW_STRING(
             "Array of subscription information must be provided.")));
     }
-    if (args.Length() >= 2 && !args[1]->IsUndefined() && !args[1]->IsString()) {
+    if (args.Length() >= 2 && !args[1]->IsUndefined() && !args[1]->IsObject()) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Optional identity must be an object.")));
+    }
+    if (args.Length() >= 3 && !args[2]->IsUndefined() && !args[2]->IsString()) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Optional subscription label must be a string.")));
     }
-    if (args.Length() > 2) {
+    if (args.Length() > 3) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Function expects at most two arguments.")));
+            "Function expects at most three arguments.")));
     }
 
     blpapi::SubscriptionList sl;
@@ -920,22 +1095,24 @@ Session::subscribe(const Arguments& args, int action)
     }
 
     BLPAPI_EXCEPTION_TRY
-    if (args.Length() == 2) {
-        Local<String> s = args[1]->ToString();
+
+    const blpapi::Identity *identity = session->getIdentity(args, 1);
+    if (args.Length() == 3) {
+        Local<String> s = args[2]->ToString();
         String::Utf8Value labelv(s);
         if (action == 1)
             session->d_session->resubscribe(sl, *labelv, labelv.length());
         else if (action == 2)
             session->d_session->unsubscribe(sl);
         else
-            session->d_session->subscribe(sl, session->d_identity, *labelv, labelv.length());
+            session->d_session->subscribe(sl, *identity, *labelv, labelv.length());
     } else {
         if (action == 1)
             session->d_session->resubscribe(sl);
         else if (action == 2)
             session->d_session->unsubscribe(sl);
         else
-            session->d_session->subscribe(sl);
+            session->d_session->subscribe(sl, *identity);
     }
     BLPAPI_EXCEPTION_CATCH_RETURN
 
@@ -998,13 +1175,17 @@ Session::Request(const Arguments& args)
             "Integer correlation identifier must be provided "
             "as fourth parameter.")));
     }
-    if (args.Length() >= 5 && !args[4]->IsUndefined() && !args[4]->IsString()) {
+    if (args.Length() >= 5 && !args[4]->IsUndefined() && !args[4]->IsObject()) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Optional identity must be an object.")));
+    }
+    if (args.Length() >= 6 && !args[5]->IsUndefined() && !args[5]->IsString()) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Optional request label must be a string.")));
     }
-    if (args.Length() > 5) {
+    if (args.Length() > 6) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Function expects at most five arguments.")));
+            "Function expects at most six arguments.")));
     }
 
     int cidi = args[3]->Int32Value();
@@ -1026,7 +1207,7 @@ Session::Request(const Arguments& args)
     Local<String> name = args[1]->ToString();
     String::Utf8Value namev(name);
 
-    blpapi::Request request = service.createRequest(*namev);
+    blpapi::Request request(service.createRequest(*namev));
     std::string error;
     if (loadRequest(&request, args[2], &error)) {
         RetThrowException(Exception::Error(NEW_STRING(error.c_str())));
@@ -1034,12 +1215,14 @@ Session::Request(const Arguments& args)
 
     blpapi::CorrelationId cid(cidi);
 
-    if (args.Length() == 5) {
-        String::Utf8Value labelv(args[4]->ToString());
-        session->d_session->sendRequest(request, session->d_identity,
+    const blpapi::Identity *identity = session->getIdentity(args, 4);
+
+    if (args.Length() == 6) {
+        String::Utf8Value labelv(args[5]->ToString());
+        session->d_session->sendRequest(request, *identity,
                                         cid, 0, *labelv, labelv.length());
     } else {
-        session->d_session->sendRequest(request, session->d_identity, cid);
+        session->d_session->sendRequest(request, *identity, cid);
     }
 
     BLPAPI_EXCEPTION_CATCH_RETURN
@@ -1316,6 +1499,26 @@ Session::elementValueToValue(Isolate *isolate,
 #endif
 }
 
+
+#if NODE_VERSION_AT_LEAST(0, 11, 0)
+const blpapi::Identity*
+Session::getIdentity(const FunctionCallbackInfo<Value>& args, int index)
+#else
+const blpapi::Identity*
+Session::getIdentity(const Arguments& args, int index)
+#endif
+{
+    const blpapi::Identity* identity = &(this->d_identity);
+    if (args.Length() > index && args[index]->IsObject()) {
+        // If the identity was supplied, use it.
+        Identity* id = ObjectWrap::Unwrap<Identity>(args[index]->ToObject());
+        if (id != NULL) {
+            identity = id->getIdentity();
+        }
+    }
+    return identity;
+}
+
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
 #define EVENT_TO_STRING(e) \
     case blpapi::Event::e : return String::NewFromUtf8(isolate, #e)
@@ -1366,10 +1569,39 @@ Session::processMessage(Isolate *isolate,
 
     Handle<Value> argv[2];
 
-    const blpapi::Name& messageType = msg.messageType();
+    blpapi::Name messageType = msg.messageType();
+    bool isAuthSuccess = false;
+    bool isAuthFailure = false;
     if ("SessionTerminated" == messageType) {
         d_stopped = true;
     }
+    else if ("AuthorizationSuccess" == messageType) {
+        isAuthSuccess = true;
+    }
+    else if ("AuthorizationFailure" == messageType) {
+        isAuthFailure = true;
+    }
+
+    Local<Object> identityObj;
+
+    if (isAuthSuccess || isAuthFailure) {
+        // We convert both authorization successes and failures into a more
+        // generic AuthorizationResponse to simplify handling in the js. Client
+        // code can distinguish between them by checking for the identity
+        // object, which is only present for successes.
+        messageType = blpapi::Name("AuthorizationResponse");
+        if (et == blpapi::Event::RESPONSE) {
+            std::map<int, blpapi::Identity>::iterator f =
+                d_identities.find(msg.correlationId(0).asInteger());
+            if (f != d_identities.end()) {
+                if (isAuthSuccess) {
+                    identityObj = Identity::New(isolate, f->second);
+                }
+                d_identities.erase(f);
+            }
+        }
+    }
+
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
     argv[0] = String::NewFromUtf8(isolate,
                                   messageType.string(),
@@ -1431,17 +1663,27 @@ Session::processMessage(Isolate *isolate,
 #endif
         }
     }
+
+    Local<Object> data = elementToValue(isolate, msg.asElement())->ToObject();
 #if NODE_VERSION_AT_LEAST(0, 11, 15)
     o->ForceSet(Local<String>::New(isolate, s_correlations),
                 correlations, (PropertyAttribute)(ReadOnly | DontDelete));
 
-    o->ForceSet(Local<String>::New(isolate, s_data),
-                elementToValue(isolate, msg.asElement()));
+    o->ForceSet(Local<String>::New(isolate, s_data), data);
+
+    if (!identityObj.IsEmpty()) {
+        data->ForceSet(Local<String>::New(isolate, s_identity), identityObj);
+    }
+
 #else
     o->Set(s_correlations, correlations,
            (PropertyAttribute)(ReadOnly | DontDelete));
 
-    o->Set(s_data, elementToValue(isolate, msg.asElement()));
+    o->Set(s_data, data);
+
+    if (!identityObj.IsEmpty()) {
+        data->Set(s_identity, identityObj);
+    }
 #endif
 
     argv[1] = o;
@@ -1556,6 +1798,7 @@ Session::emit(Isolate *isolate, int argc, Handle<Value> argv[])
 
 void init(Handle<Object> target) {
     BloombergLP::blpapijs::Session::Initialize(target);
+    BloombergLP::blpapijs::Identity::Initialize(target);
 }
 
 NODE_MODULE(blpapijs, init)
