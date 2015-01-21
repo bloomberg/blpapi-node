@@ -17,7 +17,7 @@ Dependencies
 
 This module requires:
 
-+ Node.js version >= **0.6.x**
++ Node.js version >= **0.6.x** (io.js >= **1.0.x** is supported)
 + Linux, Windows, or Mac OS X (32 or 64-bit)
 + GCC (Linux), MSVC++ (Windows), or Xcode (Mac OS X)
 + Bloomberg Desktop API (DAPI), Server API (SAPI), or [B-PIPE] subscription
