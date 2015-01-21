@@ -1084,11 +1084,11 @@ Session::elementToValue(Isolate *isolate, const blpapi::Element& e)
             } else {
                 sev = elementValueToValue(isolate, se);
             }
-#if NODE_VERSION_AT_LEAST(0, 11, 0)
-            o->Set(String::NewFromUtf8(isolate,
-                                       se.name().string(),
-                                       String::kNormalString,
-                                       se.name().length()),
+#if NODE_VERSION_AT_LEAST(0, 11, 15)
+            o->ForceSet(String::NewFromUtf8(isolate,
+                                            se.name().string(),
+                                            String::kNormalString,
+                                            se.name().length()),
                    sev, (PropertyAttribute)(ReadOnly | DontDelete));
 #else
             o->Set(String::New(se.name().string(), se.name().length()),
@@ -1393,17 +1393,17 @@ Session::processMessage(Isolate *isolate,
     argv[0] = String::New(messageType.string(), messageType.length());
 #endif
 
-#if NODE_VERSION_AT_LEAST(0, 11, 0)
+#if NODE_VERSION_AT_LEAST(0, 11, 15)
     Local<Object> o = Object::New(isolate);
-    o->Set(Local<String>::New(isolate, s_event_type),
-           eventTypeToString(isolate, et),
-           (PropertyAttribute)(ReadOnly | DontDelete));
-    o->Set(Local<String>::New(isolate, s_message_type),
-           argv[0],
-           (PropertyAttribute)(ReadOnly | DontDelete));
-    o->Set(Local<String>::New(isolate, s_topic_name),
-           String::NewFromUtf8(isolate, msg.topicName()),
-           (PropertyAttribute)(ReadOnly | DontDelete));
+    o->ForceSet(Local<String>::New(isolate, s_event_type),
+                eventTypeToString(isolate, et),
+                (PropertyAttribute)(ReadOnly | DontDelete));
+    o->ForceSet(Local<String>::New(isolate, s_message_type),
+                argv[0],
+                (PropertyAttribute)(ReadOnly | DontDelete));
+    o->ForceSet(Local<String>::New(isolate, s_topic_name),
+                String::NewFromUtf8(isolate, msg.topicName()),
+                (PropertyAttribute)(ReadOnly | DontDelete));
 #else
     Local<Object> o = Object::New();
     o->Set(s_event_type, eventTypeToString(isolate, et),
@@ -1445,12 +1445,12 @@ Session::processMessage(Isolate *isolate,
 #endif
         }
     }
-#if NODE_VERSION_AT_LEAST(0, 11, 0)
-    o->Set(Local<String>::New(isolate, s_correlations),
-           correlations, (PropertyAttribute)(ReadOnly | DontDelete));
+#if NODE_VERSION_AT_LEAST(0, 11, 15)
+    o->ForceSet(Local<String>::New(isolate, s_correlations),
+                correlations, (PropertyAttribute)(ReadOnly | DontDelete));
 
-    o->Set(Local<String>::New(isolate, s_data),
-           elementToValue(isolate, msg.asElement()));
+    o->ForceSet(Local<String>::New(isolate, s_data),
+                elementToValue(isolate, msg.asElement()));
 #else
     o->Set(s_correlations, correlations,
            (PropertyAttribute)(ReadOnly | DontDelete));
