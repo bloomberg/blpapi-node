@@ -76,6 +76,111 @@ using namespace v8;
 namespace BloombergLP {
 namespace blpapijs {
 
+namespace {
+
+static inline void
+mkdatetime(blpapi::Datetime* dt, Local<Value> val)
+{
+    double ms = Date::Cast(*val)->NumberValue();
+    time_t sec = static_cast<time_t>(ms / 1000.0);
+    int remainder = static_cast<int>(fmod(ms, 1000.0));
+
+    struct tm tm;
+#ifdef _WIN32
+    gmtime_s(&tm, &sec);
+#else
+    gmtime_r(&sec, &tm);
+#endif
+
+    dt->setDate(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+    dt->setTime(tm.tm_hour, tm.tm_min, tm.tm_sec, remainder);
+}
+
+template <typename T>
+void loadElement(blpapi::Element *elem, const T& value, bool forArray)
+{
+    if (forArray) {
+        elem->appendValue(value);
+    } else {
+        elem->setValue(value);
+    }
+}
+
+int loadElement(blpapi::Element *elem,
+                Local<Value>     val,
+                bool             forArray,
+                std::string     *error)
+{
+    if (val->IsString()) {
+        loadElement(elem, *String::Utf8Value(val), forArray);
+    } else if (val->IsBoolean()) {
+        loadElement(elem, val->BooleanValue(), forArray);
+    } else if (val->IsNumber()) {
+        loadElement(elem, val->NumberValue(), forArray);
+    } else if (val->IsInt32()) {
+        loadElement(elem, val->Int32Value(), forArray);
+    } else if (val->IsUint32()) {
+        loadElement(elem,
+                    static_cast<blpapi::Int64>(val->Uint32Value()),
+                    forArray);
+    } else if (val->IsDate()) {
+        blpapi::Datetime dt;
+        mkdatetime(&dt, val);
+        loadElement(elem, dt, forArray);
+    } else if (val->IsArray()) {
+        blpapi::Element subElem;
+        if (forArray) {
+            subElem = elem->appendElement();
+            elem = &subElem;
+        }
+
+        Local<Object> subArray = val->ToObject();
+        const int subArrayLen = Array::Cast(*val)->Length();
+        for (int i = 0; i < subArrayLen; ++i) {
+            if (loadElement(elem, subArray->Get(i), true, error)) {
+                return 1;
+            }
+        }
+    } else if (val->IsObject()) {
+        blpapi::Element subElem;
+        if (forArray) {
+            subElem = elem->appendElement();
+            elem = &subElem;
+        }
+
+        Local<Object> obj = val->ToObject();
+        Local<Array> props = obj->GetPropertyNames();
+        for (std::size_t i = 0; i < props->Length(); ++i) {
+            Local<Value> key = props->Get(i);
+            String::Utf8Value keyStr(key);
+            blpapi::Element elemValue = elem->getElement(*keyStr);
+            if (loadElement(&elemValue, obj->Get(key), false, error)) {
+                return 1;
+            }
+        }
+    } else {
+        if (forArray) {
+            *error = "Array contains invalid type";
+        } else {
+            *error = "Object contains invalid value type.";
+        }
+        return 1;
+    }
+
+    return 0;
+}
+
+inline
+int loadRequest(blpapi::Request *request,
+                Local<Value>     val,
+                std::string     *error)
+{
+    blpapi::Element elem = request->asElement();
+    return loadElement(&elem, val->ToObject(), false, error);
+}
+
+}  // close anonymous namespace
+
 class Session : public ObjectWrap,
                 public blpapi::EventHandler {
 public:
@@ -861,24 +966,6 @@ DEFINE_WRAPPER(Subscribe, subscribe, 0)
 DEFINE_WRAPPER(Resubscribe, subscribe, 1)
 DEFINE_WRAPPER(Unsubscribe, subscribe, 2)
 
-static inline void
-mkdatetime(blpapi::Datetime* dt, Local<Value> val)
-{
-    double ms = Date::Cast(*val)->NumberValue();
-    time_t sec = static_cast<time_t>(ms / 1000.0);
-    int remainder = static_cast<int>(fmod(ms, 1000.0));
-
-    struct tm tm;
-#ifdef _WIN32
-    gmtime_s(&tm, &sec);
-#else
-    gmtime_r(&sec, &tm);
-#endif
-
-    dt->setDate(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
-    dt->setTime(tm.tm_hour, tm.tm_min, tm.tm_sec, remainder);
-}
-
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
 void
 Session::Request(const FunctionCallbackInfo<Value>& args)
@@ -940,110 +1027,9 @@ Session::Request(const Arguments& args)
     String::Utf8Value namev(name);
 
     blpapi::Request request = service.createRequest(*namev);
-
-    // Loop over object properties, appending/setting into the request.
-    Local<Object> obj = args[2]->ToObject();
-    Local<Array> props = obj->GetPropertyNames();
-
-    for (std::size_t i = 0; i < props->Length(); ++i) {
-        // Process the key.
-        Local<Value> keyval = props->Get(i);
-        Local<String> key = keyval->ToString();
-        String::Utf8Value keyv(key);
-
-        // Process the value.
-        //
-        // The values present on the outer object are marshalled into the
-        // blpapi::Request by setting values using 'set'.  Arrays indicate
-        // values which should be marshalled using 'append'.
-        Local<Value> val = obj->Get(keyval);
-        if (val->IsString()) {
-            Local<String> s = val->ToString();
-            String::Utf8Value valv(s);
-            request.set(*keyv, *valv);
-        } else if (val->IsBoolean()) {
-            request.set(*keyv, val->BooleanValue());
-        } else if (val->IsNumber()) {
-            request.set(*keyv, val->NumberValue());
-        } else if (val->IsInt32()) {
-            request.set(*keyv, val->Int32Value());
-        } else if (val->IsUint32()) {
-            request.set(*keyv,
-                static_cast<blpapi::Int64>(val->Uint32Value()));
-        } else if (val->IsDate()) {
-            blpapi::Datetime dt;
-            mkdatetime(&dt, val);
-            request.set(*keyv, dt);
-        } else if (val->IsArray()) {
-            // Arrays are marshalled into the blpapi::Request by appending
-            // value types using the key of the array in the outer object.
-            Local<Object> subarray = val->ToObject();
-            int jmax = Array::Cast(*val)->Length();
-            for (int j = 0; j < jmax; ++j) {
-                Local<Value> subval = subarray->Get(j);
-                // Only strings, booleans, and numbers are marshalled.
-                if (subval->IsString()) {
-                    Local<String> s = subval->ToString();
-                    String::Utf8Value subvalv(s);
-                    request.append(*keyv, *subvalv);
-                } else if (subval->IsBoolean()) {
-                    request.append(*keyv, subval->BooleanValue());
-                } else if (subval->IsNumber()) {
-                    request.append(*keyv, subval->NumberValue());
-                } else if (subval->IsInt32()) {
-                    request.append(*keyv, subval->Int32Value());
-                } else if (subval->IsUint32()) {
-                    request.append(*keyv,
-                        static_cast<blpapi::Int64>(subval->Uint32Value()));
-                } else if (subval->IsDate()) {
-                    blpapi::Datetime dt;
-                    mkdatetime(&dt, subval);
-                    request.append(*keyv, dt);
-                } else {
-                    RetThrowException(Exception::Error(NEW_STRING(
-                        "Array contains invalid value type.")));
-                }
-            }
-#if NODE_VERSION_AT_LEAST(0, 11, 0)
-        } else if (val->IsObject() &&
-                   key->Equals(
-                        Local<String>::New(args.GetIsolate(), s_overrides))) {
-#else
-        } else if (val->IsObject() && key->Equals(s_overrides)) {
-#endif
-            blpapi::Element overrides = request.getElement("overrides");
-            Local<Array> subkeys = val->ToObject()->GetPropertyNames();
-            for (std::size_t j = 0; j < subkeys->Length(); ++j) {
-                blpapi::Element override = overrides.appendElement();
-                Local<String> subkey = subkeys->Get(j)->ToString();
-                String::Utf8Value subkeyv(subkey);
-                Local<Value> subval = val->ToObject()->Get(subkey);
-                if (subval->IsString()) {
-                    Local<String> s = subval->ToString();
-                    String::Utf8Value subvalv(s);
-                    override.setElement(*subkeyv, *subvalv);
-                } else if (subval->IsBoolean()) {
-                    override.setElement(*subkeyv, subval->BooleanValue());
-                } else if (subval->IsNumber()) {
-                    override.setElement(*subkeyv, subval->NumberValue());
-                } else if (subval->IsInt32()) {
-                    override.setElement(*subkeyv, subval->Int32Value());
-                } else if (subval->IsUint32()) {
-                    override.setElement(*subkeyv,
-                        static_cast<blpapi::Int64>(subval->Uint32Value()));
-                } else if (subval->IsDate()) {
-                    blpapi::Datetime dt;
-                    mkdatetime(&dt, subval);
-                    request.append(*subkeyv, dt);
-                } else {
-                    RetThrowException(Exception::Error(NEW_STRING(
-                        "Object 'overrides' contains invalid type.")));
-                }
-            }
-        } else {
-            RetThrowException(Exception::Error(NEW_STRING(
-                "Object contains invalid value type.")));
-        }
+    std::string error;
+    if (loadRequest(&request, args[2], &error)) {
+        RetThrowException(Exception::Error(NEW_STRING(error.c_str())));
     }
 
     blpapi::CorrelationId cid(cidi);
