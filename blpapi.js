@@ -3,6 +3,13 @@ var util = require('util');
 var path = require('path');
 var blpapi = require(path.join(__dirname, '/build/Release/blpapijs'));
 
+// Note: When support for authorizing multiple identities was added, this
+// added an optional identity parameter to functions that could be called on
+// different identities. In all cases, this was added before the optional
+// label. To avoid breaking existing callers, when these functions are called
+// with the old number of arguments, they check the last argument and will
+// accept either a label or identity.
+
 exports.Session = function(args) {
     this.session = new blpapi.Session(args);
     var that = this;
@@ -20,6 +27,10 @@ exports.Session.prototype.authorize =
     function(uri, cid) {
         return this.session.authorize(uri, cid);
     }
+exports.Session.prototype.authorizeUser =
+    function(request, cid) {
+        return this.session.authorizeUser(request, cid);
+    }
 exports.Session.prototype.stop =
     function() {
         return this.session.stop();
@@ -33,8 +44,14 @@ exports.Session.prototype.openService =
         return this.session.openService(uri, cid);
     }
 exports.Session.prototype.subscribe =
-    function(sub, label) {
-        return this.session.subscribe(sub, label);
+    function(sub, arg2, arg3) {
+        var identity = arg2;
+        var label = arg3;
+        if ( 2 === arguments.length && typeof arg2 === 'string') {
+            identity = undefined;
+            label = arg2;
+        }
+        return this.session.subscribe(sub, identity, label);
     }
 exports.Session.prototype.resubscribe =
     function(sub, label) {
@@ -45,8 +62,14 @@ exports.Session.prototype.unsubscribe =
         return this.session.unsubscribe(sub, label);
     }
 exports.Session.prototype.request =
-    function(uri, name, request, cid, label) {
-        return this.session.request(uri, name, request, cid, label);
+    function(uri, name, request, cid, arg5, arg6) {
+        var identity = arg5;
+        var label = arg6;
+        if (5 === arguments.length && typeof arg5 === 'string') {
+            identity = undefined;
+            label = arg5;
+        }
+        return this.session.request(uri, name, request, cid, identity, label);
     }
 
 // Local variables:
