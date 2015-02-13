@@ -47,7 +47,7 @@ exports.Session.prototype.subscribe =
     function(sub, arg2, arg3) {
         var identity = arg2;
         var label = arg3;
-        if ( 2 === arguments.length && typeof arg2 === 'string') {
+        if (2 === arguments.length && typeof arg2 === 'string') {
             identity = undefined;
             label = arg2;
         }

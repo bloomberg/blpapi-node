@@ -613,10 +613,8 @@ Session::Start(const Arguments& args)
 #endif
 }
 
-/**
- * Set the default identity to use when a request/subscription does not
- * specify the identity to use.
- */
+// Set the default identity to use when a request/subscription does not
+// specify the identity to use.
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
 void
 Session::Authorize(const FunctionCallbackInfo<Value>& args)
@@ -637,8 +635,8 @@ Session::Authorize(const Arguments& args)
     }
     if (args.Length() < 2 || !args[1]->IsInt32()) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Integer correlation identifier must be provided "
-                "as second parameter.")));
+            "Integer correlation identifier must be provided as second "
+            "parameter.")));
     }
     if (args.Length() > 2) {
         RetThrowException(Exception::Error(NEW_STRING(
@@ -707,11 +705,9 @@ Session::Authorize(const Arguments& args)
 #endif
 }
 
-/**
- * Create a new Identity object and send an authorization request for it.
- * If the authorization request succeeds, the wrapped Identity object is
- * in the response as data.identity.
- */
+// Create a new Identity object and send an authorization request for it.
+// If the authorization request succeeds, the wrapped Identity object is
+// in the response as data.identity.
 #if NODE_VERSION_AT_LEAST(0, 11, 0)
 void
 Session::AuthorizeUser(const FunctionCallbackInfo<Value>& args)
@@ -737,7 +733,7 @@ Session::AuthorizeUser(const Arguments& args)
     }
     if (args.Length() > 2) {
         RetThrowException(Exception::Error(NEW_STRING(
-                                  "Function expects at most two arguments.")));
+            "Function expects at most two arguments.")));
     }
 
     int cidi = args[1]->Int32Value();
@@ -746,7 +742,7 @@ Session::AuthorizeUser(const Arguments& args)
 
     if (!session->d_session || session->d_destroy) {
         RetThrowException(Exception::Error(NEW_STRING(
-                                      "Session has already been destroyed.")));
+            "Session has already been destroyed.")));
     }
 
     BLPAPI_EXCEPTION_TRY
@@ -793,15 +789,15 @@ Session::Stop(const Arguments& args)
 
     if (!session->d_session || session->d_destroy) {
         RetThrowException(Exception::Error(NEW_STRING(
-                                      "Session has already been destroyed.")));
+            "Session has already been destroyed.")));
     }
     if (!session->d_started) {
         RetThrowException(Exception::Error(NEW_STRING(
-                                            "Session has not been started.")));
+            "Session has not been started.")));
     }
     if (session->d_stopped) {
         RetThrowException(Exception::Error(NEW_STRING(
-                                        "Session has already been stopped.")));
+            "Session has already been stopped.")));
     }
 
     session->d_stopped = true;
@@ -897,8 +893,8 @@ Session::OpenService(const Arguments& args)
     }
     if (args.Length() < 2 || !args[1]->IsInt32()) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Integer correlation identifier must be provided "
-                "as second parameter.")));
+            "Integer correlation identifier must be provided as second "
+            "parameter.")));
     }
     if (args.Length() > 2) {
         RetThrowException(Exception::Error(NEW_STRING(
@@ -1038,8 +1034,8 @@ Session::subscribe(const Arguments& args, int action)
         Local<Value> v = o->Get(i);
         if (!v->IsObject()) {
             RetThrowException(Exception::Error(NEW_STRING(
-                "Array elements must be objects "
-                        "containing subscription information.")));
+                "Array elements must be objects containing subscription "
+                "information.")));
         }
         Local<Object> io = v->ToObject();
 
@@ -1069,8 +1065,8 @@ Session::subscribe(const Arguments& args, int action)
         if (!iv->IsUndefined() && !iv->IsNull() && !iv->IsObject()) {
             RetThrowException(Exception::Error(NEW_STRING(
                 "Property 'options' must be an object containing "
-                        "whose keys and key values will be configured as "
-                        "options.")));
+                "whose keys and key values will be configured as "
+                "options.")));
         }
         std::string options;
         formOptions(&options, iv);
