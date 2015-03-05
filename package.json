@@ -8,6 +8,9 @@
   "scripts": {
     "install": "node-gyp configure build"
   },
+  "dependencies": {
+    "custom-error-generator": ">=7.0.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/bloomberg/blpapi-node.git"
