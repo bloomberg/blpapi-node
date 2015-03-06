@@ -65,7 +65,10 @@ exports.Session.prototype.authorize =
     }
 exports.Session.prototype.authorizeUser =
     function(request, cid) {
-        return invoke.call(this.session, this.session.authorizeUser, request, cid);
+        return invoke.call(this.session,
+                           this.session.authorizeUser,
+                           request,
+                           cid);
     }
 exports.Session.prototype.stop =
     function() {
@@ -87,7 +90,11 @@ exports.Session.prototype.subscribe =
             identity = undefined;
             label = arg2;
         }
-        return invoke.call(this.session, this.session.subscribe, sub, identity, label);
+        return invoke.call(this.session,
+                           this.session.subscribe,
+                           sub,
+                           identity,
+                           label);
     }
 exports.Session.prototype.resubscribe =
     function(sub, label) {

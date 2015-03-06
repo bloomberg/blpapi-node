@@ -9,7 +9,7 @@
     "install": "node-gyp configure build"
   },
   "dependencies": {
-    "custom-error-generator": ">=7.0.0"
+    "custom-error-generator": "7.0.0"
   },
   "repository": {
     "type": "git",

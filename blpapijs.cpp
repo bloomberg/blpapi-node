@@ -61,8 +61,9 @@
 
 #define BLPAPI_EXCEPTION_TRY try {
 
-#define BLPAPI_EXCEPTION_NEW(type)                                                         \
-    Local<Object> err = Exception::Error(NEW_STRING(e.description().c_str()))->ToObject(); \
+#define BLPAPI_EXCEPTION_NEW(type)                                          \
+    Local<Object> err =                                                     \
+        Exception::Error(NEW_STRING(e.description().c_str()))->ToObject();  \
     err->Set(NEW_STRING("typeName"), NEW_STRING(#type));
 
 #define BLPAPI_EXCEPTION_THROW(prefix, type)                                \

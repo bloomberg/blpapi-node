@@ -191,6 +191,28 @@ use is to be passed to `request` and `subscribe`.
         }
     });
 
+Error Handling
+--------------
+
+Exceptions thrown from the C++ SDK layer are translated into
+JavaScript exceptions with the same type name. The JavaScript
+exception types inherit from `Error` with the `message` property set
+to the description obtained from the original C++ exception.
+Refer to the C++ SDK documentation for additional information on
+exceptions.
+
+This is a list of the exception types:
+
++ DuplicateCorrelationIdException
++ InvalidStateException
++ InvalidArgumentException
++ InvalidConversionException
++ IndexOutOfRangeException
++ FieldNotFoundException
++ NotFoundException
++ UnknownErrorException
++ UnsupportedOperationException
+
 License
 -------
 
