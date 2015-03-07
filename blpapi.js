@@ -2,6 +2,7 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var path = require('path');
 var blpapi = require(path.join(__dirname, '/build/Release/blpapijs'));
+var createCustomError = require('custom-error-generator');
 
 // Note: When support for authorizing multiple identities was added, this
 // added an optional identity parameter to functions that could be called on
@@ -9,6 +10,41 @@ var blpapi = require(path.join(__dirname, '/build/Release/blpapijs'));
 // label. To avoid breaking existing callers, when these functions are called
 // with the old number of arguments, they check the last argument and will
 // accept either a label or identity.
+
+var getError = function () {
+    var errorTypeNames = [
+        'DuplicateCorrelationIdException',
+        'InvalidStateException',
+        'InvalidArgumentException',
+        'InvalidConversionException',
+        'IndexOutOfRangeException',
+        'FieldNotFoundException',
+        'NotFoundException',
+        'UnknownErrorException',
+        'UnsupportedOperationException'
+    ];
+
+    errorTypeNames.forEach(function(typeName) {
+        exports[typeName] = createCustomError(typeName, Error);
+    });
+    return function(error) {
+        var typeName = error.typeName;
+        if (typeName in exports) {
+            return new exports[typeName](error.message);
+        } else {
+            return error;
+        }
+    }
+}();
+
+var invoke = function(func) {
+    try {
+        return func.apply(this,
+                          Array.prototype.slice.call(arguments, 1));
+    } catch(err) {
+        throw getError(err);
+    }
+};
 
 exports.Session = function(args) {
     this.session = new blpapi.Session(args);
@@ -21,27 +57,30 @@ util.inherits(exports.Session, EventEmitter);
 
 exports.Session.prototype.start =
     function() {
-        return this.session.start();
+        return invoke.call(this.session, this.session.start);
     }
 exports.Session.prototype.authorize =
     function(uri, cid) {
-        return this.session.authorize(uri, cid);
+        return invoke.call(this.session, this.session.authorize, uri, cid);
     }
 exports.Session.prototype.authorizeUser =
     function(request, cid) {
-        return this.session.authorizeUser(request, cid);
+        return invoke.call(this.session,
+                           this.session.authorizeUser,
+                           request,
+                           cid);
     }
 exports.Session.prototype.stop =
     function() {
-        return this.session.stop();
+        return invoke.call(this.session, this.session.stop);
     }
 exports.Session.prototype.destroy =
     function() {
-        return this.session.destroy();
+        return invoke.call(this.session, this.session.destroy);
     }
 exports.Session.prototype.openService =
     function(uri, cid) {
-        return this.session.openService(uri, cid);
+        return invoke.call(this.session, this.session.openService, uri, cid);
     }
 exports.Session.prototype.subscribe =
     function(sub, arg2, arg3) {
@@ -51,15 +90,19 @@ exports.Session.prototype.subscribe =
             identity = undefined;
             label = arg2;
         }
-        return this.session.subscribe(sub, identity, label);
+        return invoke.call(this.session,
+                           this.session.subscribe,
+                           sub,
+                           identity,
+                           label);
     }
 exports.Session.prototype.resubscribe =
     function(sub, label) {
-        return this.session.resubscribe(sub, label);
+        return invoke.call(this.session, this.session.resubscribe, sub, label);
     }
 exports.Session.prototype.unsubscribe =
     function(sub, label) {
-        return this.session.unsubscribe(sub, label);
+        return invoke.call(this.session, this.session.unsubscribe, sub, label);
     }
 exports.Session.prototype.request =
     function(uri, name, request, cid, arg5, arg6) {
@@ -69,7 +112,8 @@ exports.Session.prototype.request =
             identity = undefined;
             label = arg5;
         }
-        return this.session.request(uri, name, request, cid, identity, label);
+        return invoke.call(this.session, this.session.request,
+                           uri, name, request, cid, identity, label);
     }
 
 // Local variables:
