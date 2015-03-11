@@ -1035,11 +1035,13 @@ Session::subscribe(const Arguments& args, int action)
         RetThrowException(Exception::Error(NEW_STRING(
             "Array of subscription information must be provided.")));
     }
-    if (args.Length() >= 2 && !args[1]->IsUndefined() && !args[1]->IsObject()) {
+    if (args.Length() >= 2 && !args[1]->IsUndefined() &&
+        !args[1]->IsNull() && !args[1]->IsObject()) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Optional identity must be an object.")));
     }
-    if (args.Length() >= 3 && !args[2]->IsUndefined() && !args[2]->IsString()) {
+    if (args.Length() >= 3 && !args[2]->IsUndefined() &&
+        !args[2]->IsNull() && !args[2]->IsString()) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Optional subscription label must be a string.")));
     }
@@ -1192,11 +1194,13 @@ Session::Request(const Arguments& args)
             "Integer correlation identifier must be provided "
             "as fourth parameter.")));
     }
-    if (args.Length() >= 5 && !args[4]->IsUndefined() && !args[4]->IsObject()) {
+    if (args.Length() >= 5 && !args[4]->IsUndefined() &&
+        !args[4]->IsNull() && !args[4]->IsObject()) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Optional identity must be an object.")));
     }
-    if (args.Length() >= 6 && !args[5]->IsUndefined() && !args[5]->IsString()) {
+    if (args.Length() >= 6 && !args[5]->IsUndefined() &&
+        !args[5]->IsNull() && !args[5]->IsString()) {
         RetThrowException(Exception::Error(NEW_STRING(
             "Optional request label must be a string.")));
     }
