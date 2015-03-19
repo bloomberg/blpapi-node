@@ -45,5 +45,8 @@
     "market"
   ],
   "license": "MIT",
-  "engines": { "node": ">=0.6" }
+  "engines": {
+    "node": ">=0.12",
+    "iojs": ">=1.0"
+  }
 }
