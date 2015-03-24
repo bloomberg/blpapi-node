@@ -10,50 +10,28 @@ var service_mktbar = 1; // Unique identifier for mktbar service
 var seclist = ['//blp/mktbar/ticker/AAPL US Equity',
                '//blp/mktbar/ticker/VOD LN Equity'];
 
-session.on('SessionStarted', function(m) {
-    c.log(m);
-    session.openService('//blp/mktbar', service_mktbar);
-});
-
-session.on('ServiceOpened', function(m) {
-    c.log(m);
-    // Check to ensure the opened service is the mktbar service
-    if (m.correlations[0].value == service_mktbar) {
-        // Subscribe to market bars for each security
-        session.subscribe([
-            { security: seclist[0], correlation: 100,
-              fields: ['LAST_PRICE'], options: { interval: 5 } },
-            { security: seclist[1], correlation: 101,
-              fields: ['LAST_PRICE'], options: { interval: 5 } }
-        ]);
-    }
-});
-
-session.on('MarketBarStart', function(m) {
-    c.log(m);
-    // At this point, m.correlations[0].value will equal:
-    // 100 -> MarketBarStart for AAPL US Equity
-    // 101 -> MarketBarStart for VOD LN Equity
-});
-
-session.on('MarketBarUpdate', function(m) {
-    c.log(m);
-    // At this point, m.correlations[0].value will equal:
-    // 100 -> MarketBarUpdate for AAPL US Equity
-    // 101 -> MarketBarUpdate for VOD LN Equity
-});
-
-session.on('MarketBarEnd', function(m) {
-    c.log(m);
-    // At this point, m.correlations[0].value will equal:
-    // 100 -> MarketBarEnd for AAPL US Equity
-    // 101 -> MarketBarEnd for VOD LN Equity
-});
-
 // Helper to put the console in raw mode and shutdown session on close
 c.createConsole(session);
 
-session.start();
+session.start().then(subscribe).catch(function (error) {
+    c.log(error);
+});
+
+function subscribe() {
+    var s1 = new blpapi.Subscription(seclist[0],
+                                     ['LAST_PRICE'],
+                                     { interval: 5 });
+    var s2 = new blpapi.Subscription(seclist[1],
+                                     ['LAST_PRICE'],
+                                     { interval: 5 });
+    s1.on('data', function (data) { console.log(seclist[0]); c.log(data); });
+    s2.on('data', function (data) { console.log(seclist[1]); c.log(data); });
+    
+    // Subscribe to market bars for each security
+    session.subscribe([ s1, s2 ]).catch(function (error) {
+        c.log(error);
+    });
+}
 
 // Local variables:
 // c-basic-offset: 4

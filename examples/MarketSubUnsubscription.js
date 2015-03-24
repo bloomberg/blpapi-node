@@ -5,44 +5,38 @@ var hp = c.getHostPort();
 // Add 'authenticationOptions' key to session options if necessary.
 var session = new blpapi.Session({ serverHost: hp.serverHost,
                                    serverPort: hp.serverPort });
-var service_mktdata = 1; // Unique identifier for mktdata service
 
 var seclist = ['AAPL US Equity', 'VOD LN Equity'];
 
-session.on('SessionStarted', function(m) {
-    c.log(m);
-    session.openService('//blp/mktdata', service_mktdata);
-});
-
 var sublist = [
-	{ security: seclist[0], correlation: 100, fields: ['LAST_PRICE', 'BID', 'ASK'] },
-	{ security: seclist[1], correlation: 101, fields: ['LAST_PRICE', 'BID', 'ASK'] }
+	new blpapi.Subscription(seclist[0], ['LAST_PRICE', 'BID', 'ASK']),
+	new blpapi.Subscription(seclist[1], ['LAST_PRICE', 'BID', 'ASK'])
 ];
 
-session.on('ServiceOpened', function(m) {
-    c.log(m);
-    // Check to ensure the opened service is the mktdata service
-    if (m.correlations[0].value == service_mktdata) {
-        // Subscribe to market bars for each security
-        session.subscribe(sublist);
-
-		setTimeout(function() {
-			session.unsubscribe(sublist);
-		}, 10000);
-    }
-});
-
-session.on('MarketDataEvents', function(m) {
-    c.log(m);
-    // At this point, m.correlations[0].value will equal:
-    // 100 -> MarketBarStart for AAPL US Equity
-    // 101 -> MarketBarStart for VOD LN Equity
-});
+sublist[0].on('data', function (data) { console.log(seclist[0]); c.log(data); });
+sublist[0].on('error', function (error) { console.log(seclist[0]); c.log(error); });
+sublist[1].on('data', function (data) { console.log(seclist[1]); c.log(data); });
+sublist[1].on('error', function (error) { console.log(seclist[1]); c.log(error); });
 
 // Helper to put the console in raw mode and shutdown session on close
 c.createConsole(session);
 
-session.start();
+session.start().then(subscribe).catch(function (error) {
+    c.log(error);
+});
+
+function subscribe() {
+    // Subscribe to market bars for each security
+    session.subscribe(sublist).then(function () {
+ 	    setTimeout(unsubscribe, 10000);
+    }).catch(function (error) {
+        console.log('Subscribe failure:', error);
+    });
+}
+
+function unsubscribe() {
+	session.unsubscribe(sublist);
+}
 
 // Local variables:
 // c-basic-offset: 4

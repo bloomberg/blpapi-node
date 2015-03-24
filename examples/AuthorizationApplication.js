@@ -14,61 +14,22 @@ var ao = 'AuthenticationMode=APPLICATION_ONLY;' +
 var session = new blpapi.Session({ serverHost: hp.serverHost,
                                    serverPort: hp.serverPort,
                                    authenticationOptions: ao });
-var service_apiauth = 1;   // Unique identifier for apiauth service
-var request_token = 50;    // Unique identifier for generate token request
-var request_apiauth = 100; // Unique identifier for authorization request
 
-session.on('SessionStarted', function(m) {
-    session.openService('//blp/apiauth', service_apiauth);
+session.start().then(authorize).catch(function (error) {
+    console.log('Session start failure:', error);
+    process.exit();
 });
 
-session.on('ServiceOpened', function(m) {
-    // Check to ensure the opened service is the apiauth service
-    if (m.correlations[0].value == service_apiauth) {
-        session.generateToken(request_token);
-    }
-});
-
-session.on('TokenGenerationSuccess', function(m) {
-    // Match correlation identifier used when generating token
-    if (m.correlations[0].value == request_token) {
-        var token = m.data.token;
-        var identity = session.createIdentity();
-        session.sendAuthorizationRequest(token, identity, request_apiauth);
-    }
-});
-
-session.on('TokenGenerationFailure', function(err) {
-    // Match correlation identifier used when generating token
-    if (m.correlations[0].value == request_token) {
-        console.log('Token generation error');
-        session.stop();
-    }
-});
-
-session.on('AuthorizationSuccess', function(m) {
-    // Match correlation identifier used when authorizing
-    if (m.correlations[0].value == request_apiauth) {
+function authorize() {
+    session.authorize().then(function () {
         console.log('Authorization successful.');
         session.stop();
-    }
-});
-
-session.on('AuthorizationFailure', function(m) {
-    // Match correlation identifier used when authorizing
-    if (m.correlations[0].value == request_apiauth) {
-        console.log('Authorization response failure.');
+    }).catch(function (err) {
+        console.log('Authorization request failure:', err);
         session.stop();
-    }
-});
-
-session.on('SessionTerminated', function(m) {
-    // Once the session is stopped, release the event loop
-    session.destroy();
-});
-
-session.start();
-
+    });
+}
+                   
 // Local variables:
 // c-basic-offset: 4
 // tab-width: 4

@@ -14,31 +14,38 @@ session.on('SessionStarted', function(m) {
     session.openService('//blp/mktdata', service_mktdata);
 });
 
-session.on('ServiceOpened', function(m) {
-    c.log(m);
-    // Check to ensure the opened service is the mktdata service
-    if (m.correlations[0].value == service_mktdata) {
-        // Subscribe to market bars for each security
-        session.subscribe([
-            { security: seclist[0], correlation: 100,
-              fields: ['LAST_PRICE', 'BID', 'ASK'] },
-            { security: seclist[1], correlation: 101,
-              fields: ['LAST_PRICE', 'BID', 'ASK'] }
-        ]);
-    }
-});
+var sublist = [
+	new blpapi.Subscription(seclist[0], ['LAST_PRICE', 'BID', 'ASK']),
+	new blpapi.Subscription(seclist[1], ['LAST_PRICE', 'BID', 'ASK'])
+];
 
-session.on('MarketDataEvents', function(m) {
-    c.log(m);
-    // At this point, m.correlations[0].value will equal:
-    // 100 -> MarketBarStart for AAPL US Equity
-    // 101 -> MarketBarStart for VOD LN Equity
-});
+sublist[0].on('data', onData);
+sublist[0].on('error', onError);
+sublist[1].on('data', onData);
+sublist[1].on('error', onError);
 
 // Helper to put the console in raw mode and shutdown session on close
 c.createConsole(session);
 
-session.start();
+session.start().then(subscribe).catch(function (error) {
+    c.log(error);
+});
+
+function subscribe() {
+    // Subscribe to market bars for each security
+    session.subscribe(sublist).catch(function (error) {
+        console.log('Subscribe failure:', error);
+    });
+}
+
+function onData(data, subscription) {
+    console.log(subscription.security);
+    c.log(data);
+}
+
+function onError(error) {
+    c.log(error);
+}
 
 // Local variables:
 // c-basic-offset: 4
