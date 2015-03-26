@@ -220,7 +220,7 @@ class Identity : public ObjectWrap {
                              const blpapi::Identity&  identity);
 
     // ACCESSORS
-    const blpapi::Identity* getIdentity() const;
+    blpapi::Identity* getIdentity();
 };
 
                                // --------------
@@ -257,7 +257,7 @@ Local<Object> Identity::New(Isolate *isolate, const blpapi::Identity& identity)
 }
 
 // ACCESSORS
-const blpapi::Identity* Identity::getIdentity() const
+blpapi::Identity* Identity::getIdentity()
 {
     return &d_identity;
 }
@@ -274,8 +274,6 @@ public:
     static void New(const FunctionCallbackInfo<Value>& args);
 
     static void Start(const FunctionCallbackInfo<Value>& args);
-    static void Authorize(const FunctionCallbackInfo<Value>& args);
-    static void AuthorizeUser(const FunctionCallbackInfo<Value>& args);
     static void Stop(const FunctionCallbackInfo<Value>& args);
     static void Destroy(const FunctionCallbackInfo<Value>& args);
     static void OpenService(const FunctionCallbackInfo<Value>& args);
@@ -283,6 +281,9 @@ public:
     static void Resubscribe(const FunctionCallbackInfo<Value>& args);
     static void Unsubscribe(const FunctionCallbackInfo<Value>& args);
     static void Request(const FunctionCallbackInfo<Value>& args);
+    static void CreateIdentity(const FunctionCallbackInfo<Value>& args);
+    static void GenerateToken(const FunctionCallbackInfo<Value>& args);
+    static void SendAuthorizationRequest(const FunctionCallbackInfo<Value>& args);
 
 private:
     Session();
@@ -297,9 +298,6 @@ private:
     static Handle<Value> elementValueToValue(Isolate *,
                                              const blpapi::Element& e,
                                              int idx = 0);
-
-    const blpapi::Identity* getIdentity(const FunctionCallbackInfo<Value>& args,
-                                        int index);
 
     bool processEvent(const blpapi::Event& ev, blpapi::Session* session);
     static void processEvents(uv_async_t *async);
@@ -323,7 +321,6 @@ private:
     Isolate *d_isolate;
     blpapi::SessionOptions d_options;
     blpapi::Session *d_session;
-    blpapi::Identity d_identity;
     Persistent<Object> d_session_ref;
     std::deque<blpapi::Event> d_que;
     std::map<int, blpapi::Identity> d_identities;
@@ -394,8 +391,6 @@ Session::Initialize(Handle<Object> target)
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
     NODE_SET_PROTOTYPE_METHOD(t, "start", Start);
-    NODE_SET_PROTOTYPE_METHOD(t, "authorize", Authorize);
-    NODE_SET_PROTOTYPE_METHOD(t, "authorizeUser", AuthorizeUser);
     NODE_SET_PROTOTYPE_METHOD(t, "stop", Stop);
     NODE_SET_PROTOTYPE_METHOD(t, "destroy", Destroy);
     NODE_SET_PROTOTYPE_METHOD(t, "openService", OpenService);
@@ -403,6 +398,9 @@ Session::Initialize(Handle<Object> target)
     NODE_SET_PROTOTYPE_METHOD(t, "resubscribe", Resubscribe);
     NODE_SET_PROTOTYPE_METHOD(t, "unsubscribe", Unsubscribe);
     NODE_SET_PROTOTYPE_METHOD(t, "request", Request);
+    NODE_SET_PROTOTYPE_METHOD(t, "createIdentity", CreateIdentity);
+    NODE_SET_PROTOTYPE_METHOD(t, "generateToken", GenerateToken);
+    NODE_SET_PROTOTYPE_METHOD(t, "sendAuthorizationRequest", SendAuthorizationRequest);
 
     target->Set(String::NewFromUtf8(isolate, "Session",
                                     v8::String::kInternalizedString),
@@ -507,138 +505,6 @@ Session::Start(const FunctionCallbackInfo<Value>& args)
     session->d_started = true;
 
     args.GetReturnValue().Set(scope.Escape(args.This()));
-}
-
-// Set the default identity to use when a request/subscription does not
-// specify the identity to use.
-void
-Session::Authorize(const FunctionCallbackInfo<Value>& args)
-{
-    EscapableHandleScope scope(args.GetIsolate());
-
-    if (args.Length() < 1 || !args[0]->IsString()) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Service URI string must be provided as first parameter.")));
-    }
-    if (args.Length() < 2 || !args[1]->IsInt32()) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Integer correlation identifier must be provided as second "
-            "parameter.")));
-    }
-    if (args.Length() > 2) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Function expects at most two arguments.")));
-    }
-
-    Local<String> s = args[0]->ToString();
-    String::Utf8Value uriv(s);
-
-    int cidi = args[1]->Int32Value();
-
-    Session* session = ObjectWrap::Unwrap<Session>(args.This());
-
-    if (!session->d_session || session->d_destroy) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Session has already been destroyed.")));
-    }
-
-    BLPAPI_EXCEPTION_TRY
-
-    blpapi::EventQueue tokenEventQueue;
-    blpapi::CorrelationId tokenCid(static_cast<void*>(&tokenEventQueue));
-    session->d_session->generateToken(tokenCid, &tokenEventQueue);
-
-    std::string token;
-    blpapi::Event ev = tokenEventQueue.nextEvent();
-    if (blpapi::Event::TOKEN_STATUS == ev.eventType() ||
-        blpapi::Event::REQUEST_STATUS == ev.eventType()) {
-        blpapi::MessageIterator msgIter(ev);
-        while (msgIter.next()) {
-            blpapi::Message msg = msgIter.message();
-            if ("TokenGenerationSuccess" == msg.messageType()) {
-                token = msg.getElementAsString("token");
-            } else {
-                std::stringstream ss;
-                ss << "Failed to generate token: " << msg.getElement("reason");
-                std::string s = ss.str();
-                RetThrowException(Exception::Error(NEW_STRING(s.c_str())));
-            }
-        }
-    }
-    if (0 == token.length()) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Failed to get token.")));
-    }
-
-    blpapi::Service authService = session->d_session->getService(*uriv);
-    blpapi::Request authRequest = authService.createAuthorizationRequest(
-                                                       "AuthorizationRequest");
-    authRequest.set("token", token.c_str());
-
-    session->d_identity = session->d_session->createIdentity();
-
-    blpapi::CorrelationId cid(cidi);
-    session->d_session->sendAuthorizationRequest(authRequest,
-                                                 &session->d_identity,
-                                                 cid);
-
-    BLPAPI_EXCEPTION_CATCH_RETURN
-
-    args.GetReturnValue().Set(
-        scope.Escape(Integer::New(args.GetIsolate(), cidi)));
-}
-
-// Create a new Identity object and send an authorization request for it.
-// If the authorization request succeeds, the wrapped Identity object is
-// in the response as data.identity.
-void
-Session::AuthorizeUser(const FunctionCallbackInfo<Value>& args)
-{
-    EscapableHandleScope scope(args.GetIsolate());
-    if (args.Length() < 1 || !args[0]->IsObject()) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Object containing auth request parameters must be provided as "
-            "first parameter.")));
-    }
-    if (args.Length() < 2 || !args[1]->IsInt32()) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Integer correlation identifier must be provided as second "
-            "parameter.")));
-    }
-    if (args.Length() > 2) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Function expects at most two arguments.")));
-    }
-
-    int cidi = args[1]->Int32Value();
-
-    Session *session = ObjectWrap::Unwrap<Session>(args.This());
-
-    if (!session->d_session || session->d_destroy) {
-        RetThrowException(Exception::Error(NEW_STRING(
-            "Session has already been destroyed.")));
-    }
-
-    BLPAPI_EXCEPTION_TRY
-
-    blpapi::Service service = session->d_session->getService("//blp/apiauth");
-    blpapi::Request request(service.createAuthorizationRequest(
-                                                      "AuthorizationRequest"));
-    std::string error;
-    if (loadRequest(&request, args[0], &error)) {
-        RetThrowException(Exception::Error(NEW_STRING(error.c_str())));
-    }
-    blpapi::CorrelationId cid(cidi);
-    // We need to insert the completed Identity object into the response,
-    // so we store it here.
-    blpapi::Identity& identity = session->d_identities[cidi]
-        = session->d_session->createIdentity();
-    session->d_session->sendAuthorizationRequest(request, &identity, cid);
-
-    BLPAPI_EXCEPTION_CATCH_RETURN
-
-    args.GetReturnValue().Set(scope.Escape(Integer::New(args.GetIsolate(),
-                                                        cidi)));
 }
 
 void
@@ -827,15 +693,19 @@ Session::subscribe(const FunctionCallbackInfo<Value>& args, int action)
         RetThrowException(Exception::Error(NEW_STRING(
             "Array of subscription information must be provided.")));
     }
-    if (args.Length() >= 2 && !args[1]->IsUndefined() &&
-        !args[1]->IsNull() && !args[1]->IsObject()) {
+    // Total 2 params. 2nd could be: identity(Object), label(String)
+    if (args.Length() == 2
+        && !(args[1]->IsObject() || args[1]->IsString())) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Optional identity must be an object.")));
+            "Either identity object or string label "
+            "must be provided as second parameter.")));
     }
-    if (args.Length() >= 3 && !args[2]->IsUndefined() &&
-        !args[2]->IsNull() && !args[2]->IsString()) {
+    // Total 3 params
+    if (args.Length() == 3
+        && !(args[1]->IsObject() && args[2]->IsString())) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Optional subscription label must be a string.")));
+            "3 parameters combinations: "
+            "Identity object, and label as second & third parameter.")));   
     }
     if (args.Length() > 3) {
         RetThrowException(Exception::Error(NEW_STRING(
@@ -907,24 +777,52 @@ Session::subscribe(const FunctionCallbackInfo<Value>& args, int action)
 
     BLPAPI_EXCEPTION_TRY
 
-    const blpapi::Identity *identity = session->getIdentity(args, 1);
-    if (args.Length() == 3) {
-        Local<String> s = args[2]->ToString();
-        String::Utf8Value labelv(s);
+    // Total 1 params
+    if (args.Length() == 1) {
+        if (action == 1)
+            session->d_session->resubscribe(sl);
+        else if (action == 2)
+            session->d_session->unsubscribe(sl);
+        else
+            session->d_session->subscribe(sl);
+    }
+    // Total 2 params
+    else if (args.Length() == 2) {
+        // Case1: Identity
+        if (args[1]->IsObject()) {
+            Identity* id = ObjectWrap::Unwrap<Identity>(args[1]->ToObject());
+            blpapi::Identity* identity = id->getIdentity();
+            if (action == 1)
+                session->d_session->resubscribe(sl);
+            else if (action == 2)
+                session->d_session->unsubscribe(sl);
+            else
+                session->d_session->subscribe(sl, *identity);
+        }
+        // Case2: Label
+        else {
+            String::Utf8Value labelv(args[1]->ToString());
+            if (action == 1)
+                session->d_session->resubscribe(sl, *labelv, labelv.length());
+            else if (action == 2)
+                session->d_session->unsubscribe(sl);
+            else
+                session->d_session->subscribe(sl, *labelv, labelv.length());
+        }
+    }
+    // Total 3 params
+    else {
+        Identity* id = ObjectWrap::Unwrap<Identity>(args[1]->ToObject());
+        blpapi::Identity* identity = id->getIdentity();
+        String::Utf8Value labelv(args[2]->ToString());
         if (action == 1)
             session->d_session->resubscribe(sl, *labelv, labelv.length());
         else if (action == 2)
             session->d_session->unsubscribe(sl);
         else
             session->d_session->subscribe(sl, *identity, *labelv, labelv.length());
-    } else {
-        if (action == 1)
-            session->d_session->resubscribe(sl);
-        else if (action == 2)
-            session->d_session->unsubscribe(sl);
-        else
-            session->d_session->subscribe(sl, *identity);
     }
+
     BLPAPI_EXCEPTION_CATCH_RETURN
 
     args.GetReturnValue().Set(scope.Escape(args.This()));
@@ -964,15 +862,19 @@ Session::Request(const FunctionCallbackInfo<Value>& args)
             "Integer correlation identifier must be provided "
             "as fourth parameter.")));
     }
-    if (args.Length() >= 5 && !args[4]->IsUndefined() &&
-        !args[4]->IsNull() && !args[4]->IsObject()) {
+    // Total 5 params. 4th could be: identity(Object), label(String)
+    if (args.Length() == 5
+        && !(args[4]->IsObject() || args[4]->IsString())) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Optional identity must be an object.")));
+            "Either identity object or string label "
+            "must be provided as fifth parameter.")));
     }
-    if (args.Length() >= 6 && !args[5]->IsUndefined() &&
-        !args[5]->IsNull() && !args[5]->IsString()) {
+    // Total 6 params
+    if (args.Length() == 6
+        && !(args[4]->IsObject() && args[5]->IsString())) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "Optional request label must be a string.")));
+            "6 parameters combinations: "
+            "Identity object, and label as fifth & sixth parameter.")));   
     }
     if (args.Length() > 6) {
         RetThrowException(Exception::Error(NEW_STRING(
@@ -980,7 +882,6 @@ Session::Request(const FunctionCallbackInfo<Value>& args)
     }
 
     int cidi = args[3]->Int32Value();
-
     Session* session = ObjectWrap::Unwrap<Session>(args.This());
 
     if (!session->d_session || session->d_destroy) {
@@ -1005,16 +906,151 @@ Session::Request(const FunctionCallbackInfo<Value>& args)
     }
 
     blpapi::CorrelationId cid(cidi);
-
-    const blpapi::Identity *identity = session->getIdentity(args, 4);
-
-    if (args.Length() == 6) {
-        String::Utf8Value labelv(args[5]->ToString());
-        session->d_session->sendRequest(request, *identity,
-                                        cid, 0, *labelv, labelv.length());
-    } else {
-        session->d_session->sendRequest(request, *identity, cid);
+    // Total 4 params
+    if (args.Length() == 4) {
+        session->d_session->sendRequest(request, cid);
     }
+    // Total 5 params
+    else if (args.Length() == 5) {
+        // Case1: Identity
+        if (args[4]->IsObject()) {
+            Identity* id = ObjectWrap::Unwrap<Identity>(args[4]->ToObject());
+            blpapi::Identity* identity = id->getIdentity();
+            session->d_session->sendRequest(request, *identity, cid);
+        }
+        // Case2: Label
+        else {
+            String::Utf8Value labelv(args[4]->ToString());
+            session->d_session->sendRequest(request,
+                                            cid,
+                                            0,
+                                            *labelv,
+                                            labelv.length());
+        }
+    }
+    // Total 6 params
+    else {
+        Identity* id = ObjectWrap::Unwrap<Identity>(args[4]->ToObject());
+        blpapi::Identity* identity = id->getIdentity();
+        String::Utf8Value labelv(args[5]->ToString());
+        session->d_session->sendRequest(request,
+                                        *identity,
+                                        cid,
+                                        0,
+                                        *labelv,
+                                        labelv.length());
+    }
+
+    BLPAPI_EXCEPTION_CATCH_RETURN
+
+    args.GetReturnValue().Set(
+        scope.Escape(Integer::New(args.GetIsolate(), cidi)));
+}
+
+// Create Identity object
+void
+Session::CreateIdentity(const FunctionCallbackInfo<Value>& args)
+{
+    EscapableHandleScope scope(args.GetIsolate());
+
+    Session* session = ObjectWrap::Unwrap<Session>(args.This());
+
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
+    Local<Object> identityObj;
+    BLPAPI_EXCEPTION_TRY
+
+    blpapi::Identity id = session->d_session->createIdentity();
+    identityObj = Identity::New(args.GetIsolate(), id);
+
+    BLPAPI_EXCEPTION_CATCH_RETURN
+
+    args.GetReturnValue().Set(scope.Escape(identityObj));
+}
+
+// Generate Token
+void
+Session::GenerateToken(const FunctionCallbackInfo<Value>& args)
+{
+    EscapableHandleScope scope(args.GetIsolate());
+
+    if (args.Length() < 1 || !args[0]->IsInt32()) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Integer correlation identifier must be provided as first "
+            "parameter.")));
+    }
+    if (args.Length() > 1) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Function expects at most one argument.")));
+    }
+
+    int cidi = args[0]->Int32Value();
+    blpapi::CorrelationId cid(cidi);
+    Session* session = ObjectWrap::Unwrap<Session>(args.This());
+
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
+    
+    BLPAPI_EXCEPTION_TRY
+    
+    session->d_session->generateToken(cid);
+    
+    BLPAPI_EXCEPTION_CATCH_RETURN
+
+    args.GetReturnValue().Set(
+        scope.Escape(Integer::New(args.GetIsolate(), cidi)));
+}
+
+// Send Authorization Request
+void
+Session::SendAuthorizationRequest(const FunctionCallbackInfo<Value>& args)
+{
+    EscapableHandleScope scope(args.GetIsolate());
+
+    if (args.Length() < 1 || !args[0]->IsString()) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Token string must be provided as first parameter.")));
+    }
+    if (args.Length() < 2 || !args[1]->IsObject()) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Identity must be an object.")));
+    }
+    if (args.Length() < 3 || !args[2]->IsInt32()) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Integer correlation identifier must be provided as third "
+            "parameter.")));
+    }
+    if (args.Length() > 3) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Function expects at most three arguments.")));
+    }
+
+    Session* session = ObjectWrap::Unwrap<Session>(args.This());
+    Local<String> token_js = args[0]->ToString(); 
+    String::Utf8Value token_utf8(token_js);
+    std::string token(*token_utf8);
+
+    Identity* id = ObjectWrap::Unwrap<Identity>(args[1]->ToObject());
+    blpapi::Identity* identity = id->getIdentity();
+    int cidi = args[2]->Int32Value();
+    blpapi::CorrelationId cid(cidi);
+    if (!session->d_session || session->d_destroy) {
+        RetThrowException(Exception::Error(NEW_STRING(
+            "Session has already been destroyed.")));
+    }
+    
+    BLPAPI_EXCEPTION_TRY
+
+    blpapi::Service authService = session->d_session->getService("//blp/apiauth");
+    blpapi::Request authRequest = authService.createAuthorizationRequest(
+                                                       "AuthorizationRequest");
+    authRequest.set("token", token.c_str());
+
+    session->d_session->sendAuthorizationRequest(authRequest, identity, cid);
 
     BLPAPI_EXCEPTION_CATCH_RETURN
 
@@ -1221,21 +1257,6 @@ Session::elementValueToValue(Isolate *isolate,
     return Null(isolate);
 }
 
-
-const blpapi::Identity*
-Session::getIdentity(const FunctionCallbackInfo<Value>& args, int index)
-{
-    const blpapi::Identity* identity = &(this->d_identity);
-    if (args.Length() > index && args[index]->IsObject()) {
-        // If the identity was supplied, use it.
-        Identity* id = ObjectWrap::Unwrap<Identity>(args[index]->ToObject());
-        if (id != NULL) {
-            identity = id->getIdentity();
-        }
-    }
-    return identity;
-}
-
 #define EVENT_TO_STRING(e) \
     case blpapi::Event::e : return String::NewFromUtf8(isolate, #e)
 
@@ -1273,36 +1294,8 @@ Session::processMessage(Isolate *isolate,
     Handle<Value> argv[2];
 
     blpapi::Name messageType = msg.messageType();
-    bool isAuthSuccess = false;
-    bool isAuthFailure = false;
     if ("SessionTerminated" == messageType) {
         d_stopped = true;
-    }
-    else if ("AuthorizationSuccess" == messageType) {
-        isAuthSuccess = true;
-    }
-    else if ("AuthorizationFailure" == messageType) {
-        isAuthFailure = true;
-    }
-
-    Local<Object> identityObj;
-
-    if (isAuthSuccess || isAuthFailure) {
-        // We convert both authorization successes and failures into a more
-        // generic AuthorizationResponse to simplify handling in the js. Client
-        // code can distinguish between them by checking for the identity
-        // object, which is only present for successes.
-        messageType = blpapi::Name("AuthorizationResponse");
-        if (et == blpapi::Event::RESPONSE) {
-            std::map<int, blpapi::Identity>::iterator f =
-                d_identities.find(msg.correlationId(0).asInteger());
-            if (f != d_identities.end()) {
-                if (isAuthSuccess) {
-                    identityObj = Identity::New(isolate, f->second);
-                }
-                d_identities.erase(f);
-            }
-        }
     }
 
     argv[0] = String::NewFromUtf8(isolate,
@@ -1344,10 +1337,6 @@ Session::processMessage(Isolate *isolate,
                 correlations, (PropertyAttribute)(ReadOnly | DontDelete));
 
     o->ForceSet(Local<String>::New(isolate, s_data), data);
-
-    if (!identityObj.IsEmpty()) {
-        data->ForceSet(Local<String>::New(isolate, s_identity), identityObj);
-    }
 
     argv[1] = o;
 

@@ -15,7 +15,8 @@ var session = new blpapi.Session({ serverHost: hp.serverHost,
                                    serverPort: hp.serverPort,
                                    authenticationOptions: ao });
 var service_apiauth = 1;   // Unique identifier for apiauth service
-var request_apiauth = 100; // Unique identifier for apiauth request
+var request_token = 50;    // Unique identifier for generate token request
+var request_apiauth = 100; // Unique identifier for authorization request
 
 session.on('SessionStarted', function(m) {
     session.openService('//blp/apiauth', service_apiauth);
@@ -24,12 +25,25 @@ session.on('SessionStarted', function(m) {
 session.on('ServiceOpened', function(m) {
     // Check to ensure the opened service is the apiauth service
     if (m.correlations[0].value == service_apiauth) {
-        try {
-            session.authorize('//blp/apiauth', request_apiauth);
-        } catch(e) {
-            console.log('Authorization request failure:', e);
-            session.stop();
-        }
+        session.generateToken(request_token);
+    }
+});
+
+session.on('TokenGenerationSuccess', function(m) {
+    // Match correlation identifier used when generating token
+    if (m.correlations[0].value == request_token) {
+        console.log('Token generation successful.');
+        var token = m.data.token;
+        var identity = session.createIdentity();
+        session.sendAuthorizationRequest(token, identity, request_apiauth);
+    }
+});
+
+session.on('TokenGenerationFailure', function(err) {
+    // Match correlation identifier used when generating token
+    if (m.correlations[0].value == request_token) {
+        console.log('Token generation error');
+        session.stop();
     }
 });
 
