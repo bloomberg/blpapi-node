@@ -32,7 +32,6 @@ session.on('ServiceOpened', function(m) {
 session.on('TokenGenerationSuccess', function(m) {
     // Match correlation identifier used when generating token
     if (m.correlations[0].value == request_token) {
-        console.log('Token generation successful.');
         var token = m.data.token;
         var identity = session.createIdentity();
         session.sendAuthorizationRequest(token, identity, request_apiauth);

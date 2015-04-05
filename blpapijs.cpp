@@ -283,7 +283,8 @@ public:
     static void Request(const FunctionCallbackInfo<Value>& args);
     static void CreateIdentity(const FunctionCallbackInfo<Value>& args);
     static void GenerateToken(const FunctionCallbackInfo<Value>& args);
-    static void SendAuthorizationRequest(const FunctionCallbackInfo<Value>& args);
+    static void SendAuthorizationRequest(
+        const FunctionCallbackInfo<Value>& args);
 
 private:
     Session();
@@ -400,7 +401,9 @@ Session::Initialize(Handle<Object> target)
     NODE_SET_PROTOTYPE_METHOD(t, "request", Request);
     NODE_SET_PROTOTYPE_METHOD(t, "createIdentity", CreateIdentity);
     NODE_SET_PROTOTYPE_METHOD(t, "generateToken", GenerateToken);
-    NODE_SET_PROTOTYPE_METHOD(t, "sendAuthorizationRequest", SendAuthorizationRequest);
+    NODE_SET_PROTOTYPE_METHOD(t,
+                              "sendAuthorizationRequest",
+                              SendAuthorizationRequest);
 
     target->Set(String::NewFromUtf8(isolate, "Session",
                                     v8::String::kInternalizedString),
@@ -704,8 +707,8 @@ Session::subscribe(const FunctionCallbackInfo<Value>& args, int action)
     if (args.Length() == 3
         && !(args[1]->IsObject() && args[2]->IsString())) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "3 parameters combinations: "
-            "Identity object, and label as second & third parameter.")));   
+            "3 parameters combinations must be: "
+            "Subscriptions array, identity object, and label string.")));
     }
     if (args.Length() > 3) {
         RetThrowException(Exception::Error(NEW_STRING(
@@ -820,7 +823,10 @@ Session::subscribe(const FunctionCallbackInfo<Value>& args, int action)
         else if (action == 2)
             session->d_session->unsubscribe(sl);
         else
-            session->d_session->subscribe(sl, *identity, *labelv, labelv.length());
+            session->d_session->subscribe(sl,
+                                          *identity,
+                                          *labelv,
+                                          labelv.length());
     }
 
     BLPAPI_EXCEPTION_CATCH_RETURN
@@ -873,8 +879,9 @@ Session::Request(const FunctionCallbackInfo<Value>& args)
     if (args.Length() == 6
         && !(args[4]->IsObject() && args[5]->IsString())) {
         RetThrowException(Exception::Error(NEW_STRING(
-            "6 parameters combinations: "
-            "Identity object, and label as fifth & sixth parameter.")));   
+            "6 parameters combinations must be: "
+            "Service UIR, request name, request parameters object, "
+            "integer correlation id, identity object and label string.")));
     }
     if (args.Length() > 6) {
         RetThrowException(Exception::Error(NEW_STRING(
@@ -1045,7 +1052,8 @@ Session::SendAuthorizationRequest(const FunctionCallbackInfo<Value>& args)
     
     BLPAPI_EXCEPTION_TRY
 
-    blpapi::Service authService = session->d_session->getService("//blp/apiauth");
+    blpapi::Service authService = session->d_session
+                                    ->getService("//blp/apiauth");
     blpapi::Request authRequest = authService.createAuthorizationRequest(
                                                        "AuthorizationRequest");
     authRequest.set("token", token.c_str());
