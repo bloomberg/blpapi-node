@@ -39,8 +39,7 @@ var getError = function () {
 
 var invoke = function(func) {
     try {
-        return func.apply(this,
-                          Array.prototype.slice.call(arguments, 1));
+        return func.apply(this, arguments[1]);
     } catch(err) {
         throw getError(err);
     }
@@ -55,66 +54,84 @@ exports.Session = function(args) {
 };
 util.inherits(exports.Session, EventEmitter);
 
+// Usage: no args
+// Returns: this(Session Object)
 exports.Session.prototype.start =
     function() {
-        return invoke.call(this.session, this.session.start);
+        return invoke.call(this.session, this.session.start, arguments);
     }
-exports.Session.prototype.authorize =
-    function(uri, cid) {
-        return invoke.call(this.session, this.session.authorize, uri, cid);
-    }
-exports.Session.prototype.authorizeUser =
-    function(request, cid) {
-        return invoke.call(this.session,
-                           this.session.authorizeUser,
-                           request,
-                           cid);
-    }
+
+// Usage: no args
+// Returns: this(Session Object)
 exports.Session.prototype.stop =
     function() {
-        return invoke.call(this.session, this.session.stop);
+        return invoke.call(this.session, this.session.stop, arguments);
     }
+
+// Usage: no args
+// Returns: this(Session Object)
 exports.Session.prototype.destroy =
     function() {
-        return invoke.call(this.session, this.session.destroy);
+        return invoke.call(this.session, this.session.destroy, arguments);
     }
+
+// Usage: <uri>, <cid>
+// Returns: cid
 exports.Session.prototype.openService =
-    function(uri, cid) {
-        return invoke.call(this.session, this.session.openService, uri, cid);
+    function() {
+        return invoke.call(this.session, this.session.openService, arguments);
     }
+
+// Usage: <subscriptions>, [identity], [label]
+// Returns: this(Session Object)
 exports.Session.prototype.subscribe =
-    function(sub, arg2, arg3) {
-        var identity = arg2;
-        var label = arg3;
-        if (2 === arguments.length && typeof arg2 === 'string') {
-            identity = undefined;
-            label = arg2;
-        }
-        return invoke.call(this.session,
-                           this.session.subscribe,
-                           sub,
-                           identity,
-                           label);
+    function() {
+        return invoke.call(this.session, this.session.subscribe, arguments);
     }
+
+// Usage: <subscriptions>, [identity], [label]
+// Returns: this(Session Object)
 exports.Session.prototype.resubscribe =
-    function(sub, label) {
-        return invoke.call(this.session, this.session.resubscribe, sub, label);
+    function() {
+        return invoke.call(this.session, this.session.resubscribe, arguments);
     }
+
+// Usage: <subscriptions>, [identity], [label]
+// Returns: this(Session Object)
 exports.Session.prototype.unsubscribe =
-    function(sub, label) {
-        return invoke.call(this.session, this.session.unsubscribe, sub, label);
+    function() {
+        return invoke.call(this.session, this.session.unsubscribe, arguments);
     }
+
+// Usage: <uri>, <request_name>, <request_body>, <cid>, [identity], [label]
+// Returns: cid
 exports.Session.prototype.request =
-    function(uri, name, request, cid, arg5, arg6) {
-        var identity = arg5;
-        var label = arg6;
-        if (5 === arguments.length && typeof arg5 === 'string') {
-            identity = undefined;
-            label = arg5;
-        }
-        return invoke.call(this.session, this.session.request,
-                           uri, name, request, cid, identity, label);
+    function() {
+        return invoke.call(this.session, this.session.request, arguments);
     }
+
+// Usage: no args
+// Returns: Identity
+exports.Session.prototype.createIdentity =
+    function() {
+        return invoke.call(this.session, this.session.createIdentity, arguments);
+    }        
+
+// Usage: <cid>
+// Returns: cid
+exports.Session.prototype.generateToken =
+    function() {
+        return invoke.call(this.session, this.session.generateToken, arguments);
+    }
+
+// Usage: <token>, <identity>, <cid>
+// Returns: cid
+exports.Session.prototype.sendAuthorizationRequest =
+    function() {
+        return invoke.call(this.session, this.session.sendAuthorizationRequest, arguments);
+    }
+
+
 
 // Local variables:
 // c-basic-offset: 4
