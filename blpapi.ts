@@ -10,12 +10,13 @@ import Promise = require('bluebird');
 import debug = require('debug');
 import _ = require('lodash');
 
+// Somewhat hacky but needed to import the 'blpapijs' module.
 import path = require('path');
+process.env.NODE_PATH = path.join(__dirname, 'build/Release');
 /* tslint:disable:no-var-requires */
-// TODO REVIEW: Not sure how this module can be imported in a
-// 'TypeScript' fashion.
-var blpapijs = require(path.join(__dirname, '/build/Release/blpapijs'));
+require('module').Module._initPaths();
 /* tslint:enable:no-var-requires */
+import blpapijs = require('blpapijs');
 
 import createError = require('custom-error-generator');
 
@@ -23,21 +24,12 @@ import createError = require('custom-error-generator');
 var trace = debug('blpapi:trace');
 var log = debug('blpapi:debug');
 
-interface IBlpApiSubscription {
-    security: string;
-    fields: string[];
-    options?: any;
-    correlation: number;
-}
-
 // PUBLIC TYPES
 
-export interface ISessionOpts {
-    serverHost?: string;
-    serverPort?: number;
+export interface ISessionOpts extends blpapijs.ISessionOpts {
 }
 
-export interface IIdentity {
+export interface IIdentity extends blpapijs.IIdentity {
 }
 
 
@@ -122,8 +114,8 @@ var REQUEST_TO_RESPONSE_MAP: { [index: string]: string; } = {
     'studyRequest':          'studyResponse',
 
     // //blp/apiauth
-    'AuthorizationRequest':      'AuthorizationResponse',
-    'AuthorizationTokenRequest': 'AuthorizationTokenResponse'
+    'TokenGenerationRequest': 'TokenGenerationSuccess',
+    'AuthorizationRequest':   'AuthorizationSuccess'
 };
 
 // Mapping of service URIs to the event names to listen to when subscribed to these services.
@@ -134,7 +126,7 @@ var SERVICE_TO_SUBSCRIPTION_EVENTS_MAP: { [uri: string]: string[]; } = {
     '//blp/pagedata': ['PageUpdate']
 };
 
-// Convert generic BLAPI errors caused by thrown C++ exceptions to error objects with
+// Convert generic BLPAPI errors caused by thrown C++ exceptions to error objects with
 // a type that has the same name than the exception type.
 var getError = (() => {
     var errorTypeNames = [
@@ -162,16 +154,6 @@ var getError = (() => {
     };
 })();
 
-// Wrapper for BLPAPI function calls.
-var invoke = function (func: any): any {
-    try {
-        return func.apply(this,
-                          Array.prototype.slice.call(arguments, 1));
-    } catch (err) {
-        throw getError(err);
-    }
-};
-
 function isObjectEmpty(obj: Object): boolean {
     return (0 === Object.getOwnPropertyNames(obj).length);
 }
@@ -197,7 +179,7 @@ export class Session extends events.EventEmitter {
     [index: string]: any;
 
     // DATA
-    private session: any;
+    private session: blpapijs.Session;
     private eventListeners: {[index: string]: {[index: number]: Function}} = {};
     private requests: {[index: string]: IRequestCallback} = {};
     private subscriptions: {[index: string]: Subscription} = {};
@@ -206,6 +188,16 @@ export class Session extends events.EventEmitter {
     private stopped: Promise<void> = null;
 
     // PRIVATE MANIPULATORS
+    private invoke(func: any, ...args: any[]): any
+    {
+        // Wrapper for BLPAPI function calls.
+        try {
+            return func.apply(this.session, args);
+        } catch (err) {
+            throw getError(err);
+        }
+    }
+
     private nextCorrelatorId(): number {
         return this.correlatorId++;
     }
@@ -240,7 +232,7 @@ export class Session extends events.EventEmitter {
                                                                reject: Function): void => {
             trace('Opening service: ' + uri);
             var openServiceId = this.nextCorrelatorId();
-            invoke.call(this.session, this.session.openService, uri, openServiceId);
+            this.invoke(this.session.openService, uri, openServiceId);
 
             this.listen('ServiceOpened', openServiceId, (ev: any): void => {
                 log('Service opened: ' + uri);
@@ -308,7 +300,7 @@ export class Session extends events.EventEmitter {
         }
 
         // tear down the session
-        invoke.call(this.session, this.session.destroy);
+        this.invoke(this.session.destroy);
         this.session = null;
 
         // emit event to any listeners
@@ -364,8 +356,8 @@ export class Session extends events.EventEmitter {
         this.once('SessionTerminated', this.sessionTerminatedHandler.bind(this));
         trace(opts);
         var that = this;
-        this.session.emit = () => {
-            that.emit.apply(that, arguments);
+        this.session.emit = (): boolean => {
+            return that.emit.apply(that, arguments);
         };
     }
 
@@ -375,7 +367,7 @@ export class Session extends events.EventEmitter {
 
         return new Promise<void>((resolve: Function, reject: Function): void => {
             trace('Starting session');
-            invoke.call(this.session, this.session.start);
+            this.invoke(this.session.start);
 
             var listener = (listenerName: string, handler: Function, ev: any): void => {
                 this.removeAllListeners(listenerName);
@@ -402,92 +394,188 @@ export class Session extends events.EventEmitter {
         return this.stopped = this.stopped ||
                               new Promise<void>((resolve: Function, reject: Function): void => {
             log('Stopping session');
-            invoke.call(this.session, this.session.stop);
+            this.invoke(this.session.stop);
             this.once('SessionTerminated', (ev: any): void => {
                 resolve();
             });
         }).nodeify(cb);
     }
 
+
+    // 'request' function overloads.
+
     request(uri: string,
             requestName: string,
             request: any,
-            callback: IRequestCallback,
-            identity?: IIdentity,
-            label?: string): void
+            callback: IRequestCallback): void;
+
+    request(uri: string,
+            requestName: string,
+            request: any,
+            identity: IIdentity,
+            callback: IRequestCallback): void;
+
+    request(uri: string,
+            requestName: string,
+            request: any,
+            label: string,
+            callback: IRequestCallback): void;
+
+    request(uri: string,
+            requestName: string,
+            request: any,
+            identity: IIdentity,
+            label: string,
+            callback: IRequestCallback): void;
+
+    // 'request' function definition
+    request(uri: string,
+            requestName: string,
+            request: any,
+            arg3: Object | string | IRequestCallback,
+            arg4?: string | IRequestCallback,
+            arg5?: IRequestCallback): void
     {
+        var args = Array.prototype.slice.call(arguments);
+        // Get callback and remove it from array.
+        var callback = args.splice(args.length - 1)[0];
+        // Get optional identity and label arguments (idx 3 and 4 if present).
+        var optionalArgs = args.slice(3);
+
         var executeRequest = (correlatorId: number): void => {
-            invoke.call(this.session,
-                        this.session.request,
+            var args = [this.session.request,
                         uri,
                         requestName,
                         request,
-                        correlatorId,
-                        identity,
-                        label);
+                        correlatorId].concat(optionalArgs);
+            this.invoke.apply(this, args);
         };
         this.doRequest(uri, requestName, request, executeRequest, callback);
     }
 
-    authorize(cb?: (err: any, value: any) => void): Promise<void> {
-        return new Promise<void>((resolve: () => void, reject: (err: Error) => void): void => {
-            var callback = (err: Error, data?: any, isFinal?: boolean): void => {
-                if (err) {
-                    reject(err);
-                } else if (isFinal) {
-                    resolve();
-                }
-            };
-            var uri = '//blp/apiauth';
-            var executeRequest = (correlatorId: number): void => {
-                invoke.call(this.session, this.session.authorize, uri, correlatorId);
-            };
-            this.doRequest(uri,
-                           'AuthorizationRequest', // requestName
-                           null, // request
-                           executeRequest,
-                           callback);
-        }).nodeify(cb);
-    }
+    generateToken(cb?: (err: any, value: any) => void): Promise<string>
+    {
+        var correlatorId = this.nextCorrelatorId();
 
-    authorizeUser(request: any, cb?: (err: any, value: any) => void): Promise<IIdentity> {
-        return new Promise<IIdentity>((resolve: (identity: IIdentity) => void,
-                                       reject: (err: Error) => void): void => {
-            function callback(err: Error, data?: any, isFinal?: boolean): void {
+        return new Promise<string>((resolve: (token: string) => void,
+                                    reject: (error: Error) => void): void =>
+        {
+            function callback(err: Error, data?: any): void
+            {
                 if (err) {
                     reject(err);
                 } else {
-                    var identity: IIdentity = null;
-                    if (data.hasOwnProperty('identity')) {
-                        identity = data.identity;
-                    }
-                    if (isFinal) {
-                        if (identity) {
-                            resolve(identity);
-                        } else {
-                            reject(new BlpApiError(data));
-                        }
+                    if (data.hasOwnProperty('token')) {
+                        resolve(data.token);
+                    } else {
+                        reject(new BlpApiError(data));
                     }
                 }
             }
-            var uri = '//blp/apiauth';
-            var executeRequest = (correlatorId: number): void => {
-                invoke.call(this.session, this.session.authorizeUser, request, correlatorId);
+
+            var executeRequest = (correlatorId: number): void =>
+            {
+                this.listen('TokenGenerationFailure',
+                            correlatorId,
+                            (m: any): void =>
+                            {
+                                this.unlisten('TokenGenerationFailure',
+                                              correlatorId);
+                                reject(new BlpApiError(m.data));
+                            });
+
+                this.invoke(this.session.generateToken, correlatorId);
             };
-            this.doRequest('//blp/apiauth', // uri
-                           'AuthorizationRequest', // requestName
-                           request,
+
+            this.doRequest('//blp/apiauth',
+                           'TokenGenerationRequest',
+                           null /* request */,
                            executeRequest,
                            callback);
         }).nodeify(cb);
     }
 
+    authorize(token: string,
+              cb?: (err: any, value: any) => void): Promise<IIdentity>
+    {
+        var correlatorId = this.nextCorrelatorId();
+
+        return new Promise<IIdentity>((resolve: (identity: IIdentity) => void,
+                                       reject: (error: Error) => void): void =>
+        {
+            var identity = this.session.createIdentity();
+
+            function callback(err: Error): void
+            {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(identity);
+                }
+            }
+
+            var executeRequest = (correlatorId: number): void =>
+            {
+                this.invoke(this.session.sendAuthorizationRequest,
+                            token,
+                            identity,
+                            correlatorId);
+
+                this.listen('AuthorizationFailure',
+                            correlatorId,
+                            (m: any): void =>
+                            {
+                                this.unlisten('AuthorizationFailure',
+                                              correlatorId);
+                                reject(new BlpApiError(m.data));
+                            });
+            };
+
+            this.doRequest('//blp/apiauth',
+                           'AuthorizationRequest',
+                           null /* request */,
+                           executeRequest,
+                           callback);
+        }).nodeify(cb);
+    }
+
+    // 'subscribe' function overloads.
+
     subscribe(subscriptions: Subscription[],
-              identity?: IIdentity,
-              label?: string,
-              cb?: (err: any) => void): Promise<void>
+              cb?: (err: any) => void): Promise<void>;
+
+    subscribe(subscriptions: Subscription[],
+              identity: IIdentity,
+              cb?: (err: any) => void): Promise<void>;
+
+    subscribe(subscriptions: Subscription[],
+              label: string,
+              cb?: (err: any) => void): Promise<void>;
+
+    subscribe(subscriptions: Subscription[],
+              identity: IIdentity,
+              label: string,
+              cb?: (err: any) => void): Promise<void>;
+
+    // 'subscribe' function implementation.
+
+    subscribe(subscriptions: Subscription[],
+              arg1?: IIdentity | string | ((err: any) => void),
+              arg2?: string | ((err: any) => void),
+              arg3?: (err: any) => void): Promise<void>
     {
         this.validateSession();
+
+        var args = Array.prototype.slice.call(arguments);
+        var callback: (err: any) => void = null;
+        // If callback is present it is the last argument.
+        if (typeof args[args.length - 1] === 'function') {
+            // Get callback argument and remove it from the array of arguments.
+            callback = args.splice(args.length - 1)[0];
+        }
+        // Get identity and label optional arguments, if specified they will be at index
+        // 1 and 2.
+        var optionalArgs = args.slice(1);
 
         _.forEach(subscriptions, (s: Subscription, i: number): void => {
             // XXX: O(N) - not critical but note to use ES6 Map in the future
@@ -500,14 +588,14 @@ export class Session extends events.EventEmitter {
             }
         });
 
-        var subs = _.map(subscriptions, (s: Subscription): IBlpApiSubscription => {
+        var subs = _.map(subscriptions, (s: Subscription): blpapijs.Subscription => {
             var cid = this.nextCorrelatorId();
 
             // XXX: yes, this is a side-effect of map, but it is needed for performance
             //      reasons until ES6 Map is available
             this.subscriptions[cid] = s;
 
-            var result: IBlpApiSubscription = {
+            var result: blpapijs.Subscription = {
                 security: s.security,
                 correlation: cid,
                 fields: s.fields
@@ -527,13 +615,10 @@ export class Session extends events.EventEmitter {
         })).then((): void => {
             log('Subscribing to: ' + JSON.stringify(subscriptions));
 
-            invoke.call(this.session,
-                        this.session.subscribe,
-                        subs,
-                        identity,
-                        label);
+            var fwdArgs: any[] = [this.session.subscribe, subs].concat(optionalArgs);
+            this.invoke.apply(this, fwdArgs);
 
-            _.forEach(subs, (s: IBlpApiSubscription): void => {
+            _.forEach(subs, (s: blpapijs.Subscription): void => {
                 var uri = securityToService(s.security);
                 var cid = s.correlation;
                 var userSubscription = this.subscriptions[cid];
@@ -549,12 +634,12 @@ export class Session extends events.EventEmitter {
                 });
             });
         }).catch((ex: Error): void => {
-            _.forEach(subs, (s: IBlpApiSubscription): void => {
+            _.forEach(subs, (s: blpapijs.Subscription): void => {
                 var cid = s.correlation;
                 delete this.subscriptions[cid];
             });
             throw ex;
-        }).nodeify(cb);
+        }).nodeify(callback);
     }
 
     unsubscribe(subscriptions: Subscription[], label?: string): void {
@@ -581,15 +666,18 @@ export class Session extends events.EventEmitter {
             return _.parseInt(cid);
         });
 
-        var subs = _.map(cids, (cid: number): IBlpApiSubscription => {
-            return <IBlpApiSubscription>{
+        var subs = _.map(cids, (cid: number): blpapijs.Subscription => {
+            return <blpapijs.Subscription>{
                 security: ' ',
                 correlation: cid,
                 fields: []
             };
         });
 
-        invoke.call(this.session, this.session.unsubscribe, subs, label);
+        // Build argument list appending optional arguments passed by caller.
+        var args: any[] = [this.session.unsubscribe, subs].
+                          concat(Array.prototype.slice.call(arguments, 1));
+        this.invoke.apply(this, args);
 
         _.forEach(cids, (cid: number): void => {
             process.nextTick((): void => {

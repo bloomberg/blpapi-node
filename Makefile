@@ -12,7 +12,7 @@ TSLINT := tslint
 all: build-typescript
 
 clean:
-	@rm -f $(SRCS_JS)
+	@rm -f $(SRCS_JS) $(patsubst %.js,%.js.map,$(SRCS_JS))
 
 build-typescript:
 	@$(TSC) $(SRCS_TS)

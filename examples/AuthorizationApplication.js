@@ -15,13 +15,26 @@ var session = new blpapi.Session({ serverHost: hp.serverHost,
                                    serverPort: hp.serverPort,
                                    authenticationOptions: ao });
 
-session.start().then(authorize).catch(function (error) {
-    console.log('Session start failure:', error);
-    process.exit();
-});
+session.
+    start().
+    then(generateToken).
+    catch(function (error) {
+        console.log('Session start failure:', error);
+        process.exit();
+    });
 
-function authorize() {
-    session.authorize().then(function () {
+function generateToken() {
+    session.generateToken().then(function (token) {
+        console.log('Token generation successful');
+        authorize(token);
+    }).catch(function (err) {
+        console.log('Token generation failure:', err);
+        session.stop();
+    });
+}
+
+function authorize(token) {
+    session.authorize(token).then(function (identity) {
         console.log('Authorization successful.');
         session.stop();
     }).catch(function (err) {
