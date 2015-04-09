@@ -1431,11 +1431,12 @@ void
 Session::emit(Isolate *isolate, int argc, Handle<Value> argv[])
 {
     HandleScope scope(isolate);
+    Local<Object> sessionJS = handle(isolate);
     Local<Function> emit =
         Local<Function>::Cast(
-                handle(isolate)->Get(Local<String>::New(isolate, s_emit)));
+                sessionJS->Get(Local<String>::New(isolate, s_emit)));
     node::MakeCallback(isolate,
-                       isolate->GetCurrentContext()->Global(),
+                       sessionJS,
                        emit, argc, argv);
 }
 
