@@ -9,7 +9,7 @@ declare module "blpapijs" {
         authenticationOptions?: string;
     }
 
-    export interface Subscription {
+    export interface ISubscription {
         security: string;
         fields: string[];
         options?: any;
@@ -31,11 +31,11 @@ declare module "blpapijs" {
 
         openService(uri: string, cid: number): number;
 
-        subscribe(sub: Subscription[], identity?: IIdentity, label?: string): Session;
+        subscribe(sub: ISubscription[], identity?: IIdentity, label?: string): Session;
 
-        resubscribe(sub: Subscription[], label?: string): Session;
+        resubscribe(sub: ISubscription[], label?: string): Session;
 
-        unsubscribe(sub: Subscription[], label?: string): Session;
+        unsubscribe(sub: ISubscription[], label?: string): Session;
 
         request(uri: string, name: string, request: any, cid: number,
                 identity?: IIdentity, label?: string): number;

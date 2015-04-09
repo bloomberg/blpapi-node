@@ -5,20 +5,14 @@
 import assert = require('assert');
 import events = require('events');
 import util = require('util');
-
+import path = require('path');
 import Promise = require('bluebird');
 import debug = require('debug');
 import _ = require('lodash');
-
-// Somewhat hacky but needed to import the 'blpapijs' module.
-import path = require('path');
-process.env.NODE_PATH = path.join(__dirname, 'build/Release');
-/* tslint:disable:no-var-requires */
-require('module').Module._initPaths();
-/* tslint:enable:no-var-requires */
-import blpapijs = require('blpapijs');
-
 import createError = require('custom-error-generator');
+
+// Import the binding layer module.
+import blpapijs = require('./blpapi-bind');
 
 // LOGGING
 var trace = debug('blpapi:trace');
@@ -26,12 +20,9 @@ var log = debug('blpapi:debug');
 
 // PUBLIC TYPES
 
-export interface ISessionOpts extends blpapijs.ISessionOpts {
-}
+export type ISessionOpts = blpapijs.ISessionOpts;
 
-export interface IIdentity extends blpapijs.IIdentity {
-}
-
+export type IIdentity = blpapijs.IIdentity;
 
 export interface IRequestCallback {
     (err: Error, data?: any, isFinal?: boolean): void;
@@ -205,7 +196,7 @@ export class Session extends events.EventEmitter {
     private listen(eventName: string, expectedId: number, handler: Function): void {
         if (!(eventName in this.eventListeners)) {
             trace('Listener added: ' + eventName);
-            this.on(eventName, ((eventName: string, m: any): void => {
+            this.session.on(eventName, ((eventName: string, m: any): void => {
                 var correlatorId = m.correlations[0].value;
                 assert(correlatorId in this.eventListeners[eventName],
                        'correlation id does not exist: ' + correlatorId);
@@ -221,7 +212,7 @@ export class Session extends events.EventEmitter {
         delete this.eventListeners[eventName][correlatorId];
         if (isObjectEmpty(this.eventListeners[eventName])) {
             trace('Listener removed: ' + eventName);
-            this.removeAllListeners(eventName);
+            this.session.removeAllListeners(eventName);
             delete this.eventListeners[eventName];
         }
     }
@@ -257,7 +248,7 @@ export class Session extends events.EventEmitter {
 
     private requestHandler(cb: IRequestCallback, m: any): void {
         var eventType = m.eventType;
-        var isFinal = (EVENT_TYPE.RESPONSE === eventType);
+        var isFinal = (EVENT_TYPE.PARTIAL_RESPONSE !== eventType);
 
         log(util.format('Response: %s|%d|%s',
                         m.messageType,
@@ -280,7 +271,7 @@ export class Session extends events.EventEmitter {
         trace(ev);
 
         _([{prop: 'eventListeners', cleanupFn: (eventName: string): void => {
-            this.removeAllListeners(eventName);
+            this.session.removeAllListeners(eventName);
          }},
          {prop: 'requests', cleanupFn: (k: string): void => {
             this.requests[k](new Error('session terminated'));
@@ -351,14 +342,16 @@ export class Session extends events.EventEmitter {
     // CREATORS
     constructor(opts: ISessionOpts) {
         super();
-
         this.session = new blpapijs.Session(opts);
-        this.once('SessionTerminated', this.sessionTerminatedHandler.bind(this));
+
+        // Since the binding layer doesn't bind the 'emit' function
+        // to a session object do it here.
+        this.session.emit = this.session.emit.bind(this.session);
+
+        this.session.once('SessionTerminated', this.sessionTerminatedHandler.bind(this));
+        log('Session created');
         trace(opts);
-        var that = this;
-        this.session.emit = (): boolean => {
-            return that.emit.apply(that, arguments);
-        };
+        this.setMaxListeners(0);  // Remove max listener limit
     }
 
     // MANIPULATORS
@@ -370,23 +363,24 @@ export class Session extends events.EventEmitter {
             this.invoke(this.session.start);
 
             var listener = (listenerName: string, handler: Function, ev: any): void => {
-                this.removeAllListeners(listenerName);
+                this.session.removeAllListeners(listenerName);
                 handler(ev.data);
             };
 
-            this.once('SessionStarted',
-                      listener.bind(this, 'SessionStartupFailure', (data: any): void => {
-                          log('Session started');
-                          trace(data);
-                          resolve();
-                      }));
+            this.session.once('SessionStarted',
+                              listener.bind(this,
+                                            'SessionStartupFailure', (data: any): void => {
+                                  log('Session started');
+                                  trace(data);
+                                  resolve();
+                              }));
 
-            this.once('SessionStartupFailure',
-                      listener.bind(this, 'SessionStarted', (data: any): void => {
-                          log('Session start failure');
-                          trace(data);
-                          reject(new BlpApiError(data));
-                      }));
+            this.session.once('SessionStartupFailure',
+                              listener.bind(this, 'SessionStarted', (data: any): void => {
+                                  log('Session start failure');
+                                  trace(data);
+                                  reject(new BlpApiError(data));
+                              }));
         }).nodeify(cb);
     }
 
@@ -395,7 +389,7 @@ export class Session extends events.EventEmitter {
                               new Promise<void>((resolve: Function, reject: Function): void => {
             log('Stopping session');
             this.invoke(this.session.stop);
-            this.once('SessionTerminated', (ev: any): void => {
+            this.session.once('SessionTerminated', (ev: any): void => {
                 resolve();
             });
         }).nodeify(cb);
@@ -438,7 +432,7 @@ export class Session extends events.EventEmitter {
     {
         var args = Array.prototype.slice.call(arguments);
         // Get callback and remove it from array.
-        var callback = args.splice(args.length - 1)[0];
+        var callback = args.splice(-1)[0];
         // Get optional identity and label arguments (idx 3 and 4 if present).
         var optionalArgs = args.slice(3);
 
@@ -453,7 +447,7 @@ export class Session extends events.EventEmitter {
         this.doRequest(uri, requestName, request, executeRequest, callback);
     }
 
-    generateToken(cb?: (err: any, value: any) => void): Promise<string>
+    authenticate(cb?: (err: any, value: any) => void): Promise<string>
     {
         var correlatorId = this.nextCorrelatorId();
 
@@ -475,6 +469,8 @@ export class Session extends events.EventEmitter {
 
             var executeRequest = (correlatorId: number): void =>
             {
+                this.invoke(this.session.generateToken, correlatorId);
+
                 this.listen('TokenGenerationFailure',
                             correlatorId,
                             (m: any): void =>
@@ -483,8 +479,6 @@ export class Session extends events.EventEmitter {
                                               correlatorId);
                                 reject(new BlpApiError(m.data));
                             });
-
-                this.invoke(this.session.generateToken, correlatorId);
             };
 
             this.doRequest('//blp/apiauth',
@@ -571,7 +565,7 @@ export class Session extends events.EventEmitter {
         // If callback is present it is the last argument.
         if (typeof args[args.length - 1] === 'function') {
             // Get callback argument and remove it from the array of arguments.
-            callback = args.splice(args.length - 1)[0];
+            callback = args.splice(-1)[0];
         }
         // Get identity and label optional arguments, if specified they will be at index
         // 1 and 2.
@@ -588,14 +582,14 @@ export class Session extends events.EventEmitter {
             }
         });
 
-        var subs = _.map(subscriptions, (s: Subscription): blpapijs.Subscription => {
+        var subs = _.map(subscriptions, (s: Subscription): blpapijs.ISubscription => {
             var cid = this.nextCorrelatorId();
 
             // XXX: yes, this is a side-effect of map, but it is needed for performance
             //      reasons until ES6 Map is available
             this.subscriptions[cid] = s;
 
-            var result: blpapijs.Subscription = {
+            var result: blpapijs.ISubscription = {
                 security: s.security,
                 correlation: cid,
                 fields: s.fields
@@ -618,7 +612,7 @@ export class Session extends events.EventEmitter {
             var fwdArgs: any[] = [this.session.subscribe, subs].concat(optionalArgs);
             this.invoke.apply(this, fwdArgs);
 
-            _.forEach(subs, (s: blpapijs.Subscription): void => {
+            _.forEach(subs, (s: blpapijs.ISubscription): void => {
                 var uri = securityToService(s.security);
                 var cid = s.correlation;
                 var userSubscription = this.subscriptions[cid];
@@ -634,7 +628,7 @@ export class Session extends events.EventEmitter {
                 });
             });
         }).catch((ex: Error): void => {
-            _.forEach(subs, (s: blpapijs.Subscription): void => {
+            _.forEach(subs, (s: blpapijs.ISubscription): void => {
                 var cid = s.correlation;
                 delete this.subscriptions[cid];
             });
@@ -666,8 +660,8 @@ export class Session extends events.EventEmitter {
             return _.parseInt(cid);
         });
 
-        var subs = _.map(cids, (cid: number): blpapijs.Subscription => {
-            return <blpapijs.Subscription>{
+        var subs = _.map(cids, (cid: number): blpapijs.ISubscription => {
+            return <blpapijs.ISubscription>{
                 security: ' ',
                 correlation: cid,
                 fields: []

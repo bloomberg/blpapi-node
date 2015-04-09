@@ -17,18 +17,18 @@ var session = new blpapi.Session({ serverHost: hp.serverHost,
 
 session.
     start().
-    then(generateToken).
+    then(authenticate).
     catch(function (error) {
         console.log('Session start failure:', error);
         process.exit();
     });
 
-function generateToken() {
-    session.generateToken().then(function (token) {
-        console.log('Token generation successful');
+function authenticate() {
+    session.authenticate().then(function (token) {
+        console.log('Authentication successful');
         authorize(token);
     }).catch(function (err) {
-        console.log('Token generation failure:', err);
+        console.log('Authentication failure:', err);
         session.stop();
     });
 }
