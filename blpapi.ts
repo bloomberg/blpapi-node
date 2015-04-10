@@ -344,10 +344,6 @@ export class Session extends events.EventEmitter {
         super();
         this.session = new blpapijs.Session(opts);
 
-        // Since the binding layer doesn't bind the 'emit' function
-        // to a session object do it here.
-        this.session.emit = this.session.emit.bind(this.session);
-
         this.session.once('SessionTerminated', this.sessionTerminatedHandler.bind(this));
         log('Session created');
         trace(opts);
