@@ -1,25 +1,24 @@
+import events = require('events');
 
-declare module "blpapijs" {
+declare module blpapijs {
     
-    import events = require('events');
-
-    export interface ISessionOpts {
+    interface ISessionOpts {
         serverHost?: string;
         serverPort?: number;
         authenticationOptions?: string;
     }
 
-    export interface ISubscription {
+    interface ISubscription {
         security: string;
         fields: string[];
         options?: any;
         correlation: number;
     }
 
-    export interface IIdentity {
+    interface IIdentity {
     }
 
-    export class Session extends events.EventEmitter
+    class Session extends events.EventEmitter
     {
         constructor(opts: ISessionOpts);
 
@@ -48,3 +47,6 @@ declare module "blpapijs" {
                                  cid: number): number;
     }
 }
+
+export = blpapijs;
+
