@@ -1,5 +1,57 @@
 {
-  'targets': [
+  'variables' : {
+    'node_bin_dir': '<!(npm bin)',
+    'tsc': '<(node_bin_dir)/tsc',
+    'tslint': '<(node_bin_dir)/tslint',
+    'blpapits_src': '<(module_root_dir)/blpapi.ts'
+  },
+  'targets' : [
+    {
+      # Compile typescript code
+      'target_name': 'tsc',
+      'type': 'none',
+      'dependencies': ['copy_dts'],
+      'sources': ['<(blpapits_src)'],
+      'rules': [
+        {
+          'rule_name': 'ts_comp',
+          'extension': 'ts',
+          'outputs': [
+            '<(module_root_dir)/<(RULE_INPUT_ROOT).js'
+          ],
+          'action': [
+            '<(tsc)', '--module', 'commonjs', '--target', 'ES5',
+            '--noImplicitAny', '--noEmitOnError', '--sourceMap',
+            '<(RULE_INPUT_PATH)'
+          ]
+        }
+      ],
+    },
+    {  'target_name': 'copy_dts',
+       'type': 'none',
+        # Copy 'blapijs' typescript definition files to the build directory,
+        # this is necessary to be able to import the module from typescript.
+        'copies': [
+          {
+            'files': ['<(module_root_dir)/etc/blpapijs.d.ts'],
+            'destination': '<(PRODUCT_DIR)'
+          }
+        ]
+    },
+    {
+      # Run tslint, uses a dummy output file.
+      'target_name': 'tslint',
+      'type': 'none',
+      'actions': [
+      {
+          'action_name': 'tslint',
+          'message': 'Running tslint...',
+          'inputs': ['<(module_root_dir)/blpapi.ts'],
+          'outputs': ['<(module_root_dir)/.tslint.d'],
+          'action': ['sh', '-c', '<(tslint) -f <@(_inputs) && touch <@(_outputs)']
+        }
+      ]
+    },
     {
       'target_name': 'blpapijs',
       'sources': [ 'blpapijs.cpp' ],

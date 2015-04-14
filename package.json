@@ -6,8 +6,8 @@
   "os": [ "linux", "win32", "darwin" ],
   "cpu": [ "x64", "ia32" ],
   "dependencies": {
-    "bluebird": "^2.9.13",
     "custom-error-generator": "7.0.0",
+    "bluebird": "^2.9.13",
     "debug": "^2.1.0",
     "lodash": "^2.4.1"
   },
@@ -16,8 +16,8 @@
     "typescript": "^1.4.1"
   },
   "scripts": {
-    "prepublish": "make",
-    "install": "node-gyp configure build"
+    "prepublish": "node-gyp configure build tsc tslint",
+    "install": "node-gyp configure build blpapijs"
   },
   "repository": {
     "type": "git",

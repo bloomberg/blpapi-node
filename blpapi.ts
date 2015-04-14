@@ -706,7 +706,7 @@ export class Session extends events.EventEmitter {
 // :indentSize=4:tabSize=4:noTabs=true:
 
 // ----------------------------------------------------------------------------
-// Copyright (C) 2014 Bloomberg L.P.
+// Copyright (C) 2015 Bloomberg L.P.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
