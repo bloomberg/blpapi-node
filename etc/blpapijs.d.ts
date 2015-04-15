@@ -1,7 +1,7 @@
 import events = require('events');
 
 declare module blpapijs {
-    
+
     interface ISessionOpts {
         serverHost?: string;
         serverPort?: number;
@@ -49,4 +49,3 @@ declare module blpapijs {
 }
 
 export = blpapijs;
-

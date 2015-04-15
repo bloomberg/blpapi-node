@@ -3,7 +3,9 @@
     'node_bin_dir': '<!(npm bin)',
     'tsc': '<(node_bin_dir)/tsc',
     'tslint': '<(node_bin_dir)/tslint',
-    'blpapits_src': '<(module_root_dir)/blpapi.ts'
+    'blpapi_ts': '<(module_root_dir)/blpapi.ts',
+    'blpapi_js': '<(module_root_dir)/blpapi.js',
+    'blpapijs_dts': '<(module_root_dir)/etc/blpapijs.d.ts'
   },
   'targets' : [
     {
@@ -11,18 +13,15 @@
       'target_name': 'tsc',
       'type': 'none',
       'dependencies': ['copy_dts'],
-      'sources': ['<(blpapits_src)'],
-      'rules': [
+      'actions': [
         {
-          'rule_name': 'ts_comp',
-          'extension': 'ts',
-          'outputs': [
-            '<(module_root_dir)/<(RULE_INPUT_ROOT).js'
-          ],
+          'action_name': 'ts_comp',
+          'inputs': ['<(blpapi_ts)', '<(blpapijs_dts)'],
+          'outputs': ['<(blpapi_js)'],
           'action': [
             '<(tsc)', '--module', 'commonjs', '--target', 'ES5',
             '--noImplicitAny', '--noEmitOnError', '--sourceMap',
-            '<(RULE_INPUT_PATH)'
+            '<(blpapi_ts)'
           ]
         }
       ],
@@ -33,7 +32,7 @@
         # this is necessary to be able to import the module from typescript.
         'copies': [
           {
-            'files': ['<(module_root_dir)/etc/blpapijs.d.ts'],
+            'files': ['<(blpapijs_dts)'],
             'destination': '<(PRODUCT_DIR)'
           }
         ]
@@ -46,9 +45,9 @@
       {
           'action_name': 'tslint',
           'message': 'Running tslint...',
-          'inputs': ['<(module_root_dir)/blpapi.ts'],
+          'inputs': ['<(blpapi_ts)', '<(blpapijs_dts)'],
           'outputs': ['<(module_root_dir)/.tslint.d'],
-          'action': ['sh', '-c', '<(tslint) -f <@(_inputs) && touch <@(_outputs)']
+          'action': ['sh', '-c', '<(tslint) -f <(blpapi_ts) -f <(blpapijs_dts) && touch <@(_outputs)']
         }
       ]
     },
