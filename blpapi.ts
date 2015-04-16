@@ -16,13 +16,7 @@ import blpapijs = require('./build/Release/blpapijs');
 
 // Extend the Session type with the methods from EventEmitter so
 // its instances can listen for events.
-((target: any, source: any): void => {
-    for (var k in source.prototype) {
-        if (source.prototype.hasOwnProperty(k)) {
-            target.prototype[k] = source.prototype[k];
-        }
-    }
-})(blpapijs.Session, events.EventEmitter);
+_.assign(blpapijs.Session.prototype, events.EventEmitter.prototype);
 
 // LOGGING
 var trace = debug('blpapi:trace');

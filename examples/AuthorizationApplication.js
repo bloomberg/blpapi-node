@@ -17,23 +17,23 @@ var session = new blpapi.Session({ serverHost: hp.serverHost,
 
 session.
     start().
-    then(authenticate).
+    then(function () { authenticate(session); }).
     catch(function (error) {
         console.log('Session start failure:', error);
         process.exit();
     });
 
-function authenticate() {
+function authenticate(session) {
     session.authenticate().then(function (token) {
         console.log('Authentication successful');
-        authorize(token);
+        authorize(session, token);
     }).catch(function (err) {
         console.log('Authentication failure:', err);
         session.stop();
     });
 }
 
-function authorize(token) {
+function authorize(session, token) {
     session.authorize(token).then(function (identity) {
         console.log('Authorization successful.');
         session.stop();

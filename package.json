@@ -13,7 +13,8 @@
   },
   "devDependencies": {
     "tslint": "^2.1.1",
-    "typescript": "^1.4.1"
+    "typescript": "^1.4.1",
+    "tsd": "^0.5.7"
   },
   "scripts": {
     "prepublish": "node-gyp configure build tsc tslint",

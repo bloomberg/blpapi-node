@@ -36,14 +36,19 @@ declare module blpapijs {
 
         unsubscribe(sub: ISubscription[], label?: string): Session;
 
-        request(uri: string, name: string, request: any, cid: number,
-                identity?: IIdentity, label?: string): number;
+        request(uri: string,
+                name: string,
+                request: any,
+                cid: number,
+                identity?: IIdentity,
+                label?: string): number;
 
         createIdentity(): IIdentity;
 
         generateToken(cid: number): number;
 
-        sendAuthorizationRequest(token: string, identity: IIdentity,
+        sendAuthorizationRequest(token: string,
+                                 identity: IIdentity,
                                  cid: number): number;
     }
 }
