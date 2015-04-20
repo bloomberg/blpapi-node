@@ -5,56 +5,46 @@ var hp = c.getHostPort();
 // Add 'authenticationOptions' key to session options if necessary.
 var session = new blpapi.Session({ serverHost: hp.serverHost,
                                    serverPort: hp.serverPort });
-var service_apiflds = 1; // Unique identifier for apiflds service
 
 if (process.argv.length != 4) {
     c.usage('<text search>');
 }
 var search = process.argv[3];
 
-session.on('SessionStarted', function(m) {
-    session.openService('//blp/apiflds', service_apiflds);
+session.start().then(sendRequest).catch(function (error) {
+    console.log('Session start failure:', error);
+    process.exit();
 });
 
-session.on('ServiceOpened', function(m) {
-    // Check to ensure the opened service is the apiflds service
-    if (m.correlations[0].value == service_apiflds) {
-        session.request('//blp/apiflds', 'FieldSearchRequest',
-            { searchSpec: search }, 100);
-    }
-});
+function sendRequest() {
+    session.request('//blp/apiflds',
+                    'FieldSearchRequest',
+                    { searchSpec: search },
+                    onResponse);
+}
 
 var results = 0;
 var limit = 20;
 
-session.on('fieldResponse', function(m) {
-    //c.log(m);
-    // At this point, m.correlations[0].value will equal:
-    // 100 -> FieldResponse for the free-form FieldSearchRequest
-    if (m.correlations[0].value == 100) {
-        if (results < limit) {
-            for (var i in m.data.fieldData) {
-                var fd = m.data.fieldData[i];
-                console.log(fd.fieldInfo.mnemonic, "=>",
-                            fd.fieldInfo.description);
-                results++;
-                if (results === limit)
-                    break;
-            }
-        }
-        // Stop once the final response is received
-        if (m.eventType === 'RESPONSE') {
-            session.stop();
+function onResponse(error, data, isFinal) {
+    if (error) {
+        console.log('Received error:', error);
+    } else if (results < limit) {
+        for (var i in data.fieldData) {
+            var fd = data.fieldData[i];
+            console.log(fd.fieldInfo.mnemonic, "=>",
+                        fd.fieldInfo.description);
+            results++;
+            if (results === limit)
+                break;
         }
     }
-});
+    // Stop once the final response is received
+    if (isFinal || error) {
+        session.stop();
+    }
+}
 
-session.on('SessionTerminated', function(m) {
-    // Once the session is stopped, release the event loop
-    session.destroy();
-});
-
-session.start();
 
 // Local variables:
 // c-basic-offset: 4

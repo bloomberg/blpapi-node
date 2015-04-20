@@ -5,11 +5,20 @@
   "description": "Bloomberg Open API (BLPAPI) binding for node.js",
   "os": [ "linux", "win32", "darwin" ],
   "cpu": [ "x64", "ia32" ],
-  "scripts": {
-    "install": "node-gyp configure build"
-  },
   "dependencies": {
-    "custom-error-generator": "7.0.0"
+    "custom-error-generator": "7.0.0",
+    "bluebird": "^2.9.13",
+    "debug": "^2.1.0",
+    "lodash": "^2.4.1"
+  },
+  "devDependencies": {
+    "tslint": "^2.1.1",
+    "typescript": "^1.4.1",
+    "tsd": "^0.5.7"
+  },
+  "scripts": {
+    "prepublish": "node-gyp configure build tsc tslint",
+    "install": "node-gyp configure build blpapijs"
   },
   "repository": {
     "type": "git",

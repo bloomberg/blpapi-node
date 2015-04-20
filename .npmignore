@@ -4,3 +4,7 @@ README.md
 build/
 Debug/
 Release/
+etc/
+*.ts
+*.map
+tslint.json

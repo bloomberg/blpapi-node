@@ -9,7 +9,6 @@ var util = require('util');
 // data and are not request/response based.
 module.exports.createConsole = function(session) {
     session.on('SessionTerminated', function(m) {
-        session.destroy();
         process.exit();
     });
 };
@@ -38,8 +37,7 @@ module.exports.getHostPort = function() {
 // Utility for dumping full message contents to the console.
 module.exports.log = function(m) {
     if (m)
-        console.log(m.messageType, '=>',
-                    (m ? util.inspect(m, true, null) : 'null'));
+        console.log (util.inspect(m, true, null));
 };
 
 // Local variables:
