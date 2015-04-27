@@ -14,11 +14,15 @@
   "devDependencies": {
     "tslint": "^2.1.1",
     "typescript": "^1.4.1",
-    "tsd": "^0.5.7"
+    "tsd": "^0.5.7",
+    "mocha": "^2.2.4",
+    "mockery": "^1.4.0",
+    "should": "^5.2.0"
   },
   "scripts": {
     "prepublish": "node-gyp configure build tsc tslint",
-    "install": "node-gyp configure build blpapijs"
+    "install": "node-gyp configure build blpapijs",
+    "test": "node-gyp configure build test"
   },
   "repository": {
     "type": "git",

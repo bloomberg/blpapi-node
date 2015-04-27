@@ -2,3 +2,5 @@ build/
 Debug/
 Release/
 npm-debug.log
+/node_modules/
+.*.d

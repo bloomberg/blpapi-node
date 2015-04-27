@@ -3,9 +3,14 @@
     'node_bin_dir': '<!(npm bin)',
     'tsc': '<(node_bin_dir)/tsc',
     'tslint': '<(node_bin_dir)/tslint',
+    'mocha': '<(node_bin_dir)/mocha',
     'blpapi_ts': '<(module_root_dir)/blpapi.ts',
     'blpapi_js': '<(module_root_dir)/blpapi.js',
-    'blpapijs_dts': '<(module_root_dir)/etc/blpapijs.d.ts'
+    'blpapijs_dts': '<(module_root_dir)/etc/blpapijs.d.ts',
+    'blpapi_mock_ts': '<(module_root_dir)/test/lib/mock-blpapijs.ts',
+    'blpapi_mock_js': '<(module_root_dir)/test/lib/mock-blpapijs.js',
+    'blpapi_test_ts': '<(module_root_dir)/test/blpapi.test.ts',
+    'blpapi_test_js': '<(module_root_dir)/test/blpapi.test.js',
   },
   'targets' : [
     {
@@ -16,12 +21,32 @@
       'actions': [
         {
           'action_name': 'ts_comp',
+          'message': 'Running tsc...',
           'inputs': ['<(blpapi_ts)', '<(blpapijs_dts)'],
           'outputs': ['<(blpapi_js)'],
           'action': [
             '<(tsc)', '--module', 'commonjs', '--target', 'ES5',
             '--noImplicitAny', '--noEmitOnError', '--sourceMap',
             '<(blpapi_ts)'
+          ]
+        }
+      ],
+    },
+    {
+      # Compile testing typescript code
+      'target_name': 'tsc_test',
+      'type': 'none',
+      'dependencies': ['copy_dts'],
+      'actions': [
+        {
+          'action_name': 'ts_comp_test',
+          'message': 'Running tsc for testing code...',
+          'inputs': ['<(blpapi_mock_ts)', '<(blpapi_test_ts)'],
+          'outputs': ['<(blpapi_mock_js)', '<(blpapi_test_js)'],
+          'action': [
+            '<(tsc)', '--module', 'commonjs', '--target', 'ES5',
+            '--noImplicitAny', '--noEmitOnError', '--sourceMap',
+            '<@(_inputs)'
           ]
         }
       ],
@@ -50,6 +75,35 @@
           'action': ['sh', '-c', '<(tslint) -f <(blpapi_ts) -f <(blpapijs_dts) && touch <@(_outputs)']
         }
       ]
+    },
+    {
+      # Run tslint for testing file, uses a dummy output file.
+      'target_name': 'tslint_test',
+      'type': 'none',
+      'actions': [
+      {
+          'action_name': 'tslint_test',
+          'message': 'Running tslint for testing code...',
+          'inputs': ['<(blpapi_mock_ts)', '<(blpapi_test_ts)'],
+          'outputs': ['<(module_root_dir)/test/.tslint.d'],
+          'action': ['sh', '-c', '<(tslint) -f <(blpapi_mock_ts) -f <(blpapi_test_ts) && touch <@(_outputs)']
+        }
+      ]
+    },
+    {
+      # Run mocha tests
+      'target_name': 'test',
+      'type': 'none',
+      'dependencies': ['blpapijs', 'tsc', 'tslint', 'tsc_test', 'tslint_test'],
+      'actions': [
+        {
+          'action_name': 'test',
+          'message': 'Running mocha tests...',
+          'inputs': ['<(blpapi_ts)', '<(blpapijs_dts)', '<(blpapi_mock_ts)', '<(blpapi_test_ts)'],
+          'outputs': ['<(module_root_dir)/test/.test.d'],
+          'action': ['<(mocha)', '--reporter', 'spec']
+        }
+      ],
     },
     {
       'target_name': 'blpapijs',
