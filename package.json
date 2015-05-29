@@ -18,6 +18,9 @@
   "dependencies": {
     "custom-error-generator": "7.0.0"
   },
+  "devDependencies": {
+    "node-gyp": "^2.0.1"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/bloomberg/blpapi-node.git"
