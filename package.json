@@ -3,8 +3,15 @@
   "version": "1.2.0",
   "main": "./blpapi.js",
   "description": "Bloomberg Open API (BLPAPI) binding for node.js",
-  "os": [ "linux", "win32", "darwin" ],
-  "cpu": [ "x64", "ia32" ],
+  "os": [
+    "linux",
+    "win32",
+    "darwin"
+  ],
+  "cpu": [
+    "x64",
+    "ia32"
+  ],
   "scripts": {
     "install": "node-gyp configure build"
   },
@@ -20,10 +27,19 @@
     "email": "open-tech@bloomberg.net"
   },
   "maintainers": [
-    { "name": "Andrew Paprocki", "email": "andrew@ishiboo.com" }
+    {
+      "name": "Andrew Paprocki",
+      "email": "andrew@ishiboo.com"
+    }
   ],
   "keywords": [
-    "finance", "stocks", "stock", "quotes", "tick", "realtime", "market"
+    "finance",
+    "stocks",
+    "stock",
+    "quotes",
+    "tick",
+    "realtime",
+    "market"
   ],
   "license": "MIT",
   "engines": { "node": ">=0.6" }
