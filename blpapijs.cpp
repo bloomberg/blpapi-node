@@ -1102,8 +1102,9 @@ mkutctime(struct tm* tm)
 }
 
 Handle<Value>
-Session::elementValueToValue(Isolate *isolate,
-                             const blpapi::Element& e, int idx)
+Session::elementValueToValue(Isolate                *isolate,
+                             const blpapi::Element&  e,
+                             int                     idx)
 {
     if (e.isNull())
         return Null(isolate);
@@ -1213,6 +1214,7 @@ Session::elementValueToValue(Isolate *isolate,
             return Date::New(isolate, ms);
         }
         case blpapi::DataType::SEQUENCE:
+        case blpapi::DataType::CHOICE:
             return elementToValue(isolate, e.getValueAsElement(idx));
         default:
             break;
